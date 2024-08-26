@@ -1,0 +1,4 @@
+# Models build from scratch [3 hidden layers]
+Accuracy of 65.3% with a thousand iterations and learning rate of 0.55.
+Accuracy of 65.8% with a thousand iterations and learning rate of 0.45.
+(Minor optimisation using Numba)
