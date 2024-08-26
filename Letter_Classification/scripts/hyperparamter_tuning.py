@@ -18,7 +18,6 @@ def perform_hyperparameter_tuning(X_train, Y_train, output_path):
     # Set up GridSearchCV
     grid_search = GridSearchCV(mlp, param_grid, cv=5, n_jobs=-1)
     grid_search.fit(X_train, Y_train)
-    m
     best_model = grid_search.best_estimator_
 
     # Save the best model
@@ -31,7 +30,7 @@ def perform_hyperparameter_tuning(X_train, Y_train, output_path):
 if __name__ == "__main__":
     # Set file paths
     data_path = '../dataset/emnist-letters-train.csv'
-    output_path = "../output/parameters"
+    output_path = "../output/models"
     
     # Load data
     X_train, _, _, Y_train, _, _ = load_and_preprocess_data(data_path)

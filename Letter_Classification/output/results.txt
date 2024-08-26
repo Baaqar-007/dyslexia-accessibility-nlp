@@ -6,3 +6,14 @@ Accuracy of 65.8% with a thousand iterations and learning rate of 0.45.
 # Using sklearn's Multi-perceptron classifier [ 250 layers, 1200 iterations ] with dataset of 30000. 
 Validation Set Accuracy: 0.7673
 Test Set Accuracy: 0.7693
+
+# After Hyperparameter tuning with dataset of 10000
+Best parameters found:  {'alpha': 0.001, 'hidden_layer_sizes': (250,), 'max_iter': 1200}
+Best cross-validation score: 0.65
+Validation Set Accuracy: 0.6453
+Test Set Accuracy: 0.6413
+
+# After Hyperparameter tuning with dataset of 30000
+Best parameters found: {alpha=0.01, hidden_layer_sizes=(250,), max_iter=1200 }
+Validation Set Accuracy: 0.7771
+Test Set Accuracy: 0.7822
