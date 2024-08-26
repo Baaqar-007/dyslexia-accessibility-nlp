@@ -2,3 +2,7 @@
 Accuracy of 65.3% with a thousand iterations and learning rate of 0.55.
 Accuracy of 65.8% with a thousand iterations and learning rate of 0.45.
 (Minor optimisation using Numba)
+
+# Using sklearn's Multi-perceptron classifier [ 250 layers, 1200 iterations ] with dataset of 30000. 
+Validation Set Accuracy: 0.7673
+Test Set Accuracy: 0.7693
