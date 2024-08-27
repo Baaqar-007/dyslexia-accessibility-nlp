@@ -1,7 +1,11 @@
+
 # Models build from scratch [3 hidden layers]
 Accuracy of 65.3% with a thousand iterations and learning rate of 0.55.
 Accuracy of 65.8% with a thousand iterations and learning rate of 0.45.
 (Minor optimisation using Numba)
+
+
+[Random seed for the following models => 42]
 
 # Using sklearn's Multi-perceptron classifier [ 250 layers, 1200 iterations ] with dataset of 30000. 
 Validation Set Accuracy: 0.7673
@@ -19,7 +23,6 @@ Validation Set Accuracy: 0.7771
 Test Set Accuracy: 0.7822
 
 # After Hyperparameter tuning with dataset of 88800
-Best parameters found: {alpha=0.01, hidden_layer_sizes=(100, 100), max_iter=1200,
-              random_state=42 }
+Best parameters found: {alpha=0.01, hidden_layer_sizes=(100, 100), max_iter=1200}
 Validation Set Accuracy: 0.8929
 Test Set Accuracy: 0.9004
