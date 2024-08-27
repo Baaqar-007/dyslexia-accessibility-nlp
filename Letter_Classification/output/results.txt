@@ -17,3 +17,9 @@ Test Set Accuracy: 0.6413
 Best parameters found: {alpha=0.01, hidden_layer_sizes=(250,), max_iter=1200 }
 Validation Set Accuracy: 0.7771
 Test Set Accuracy: 0.7822
+
+# After Hyperparameter tuning with dataset of 88800
+Best parameters found: {alpha=0.01, hidden_layer_sizes=(100, 100), max_iter=1200,
+              random_state=42 }
+Validation Set Accuracy: 0.8929
+Test Set Accuracy: 0.9004

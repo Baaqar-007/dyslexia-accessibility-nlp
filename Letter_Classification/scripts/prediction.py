@@ -8,9 +8,9 @@ import pickle
 
 def make_predictions_and_save_images(X_val, X_test, Y_val, Y_test, output_path):
     # Load the best model
-    mlp = joblib.load(os.path.join(output_path, "mlp_best_model_30000.pkl"))
+    mlp = joblib.load(os.path.join(output_path, "mlp_best_model_88800.pkl"))
 
-    # print(mlp)
+    print(mlp)
 
     # Evaluating on the validation set
     val_predictions = mlp.predict(X_val)
@@ -26,7 +26,7 @@ def make_predictions_and_save_images(X_val, X_test, Y_val, Y_test, output_path):
     os.makedirs(os.path.join(output_path, "predictions"), exist_ok=True)
 
     # Saving images with labels and predictions
-    for i in range(10):  # Reduced to 5 images to lighten the load
+    for i in range(15):  # Reduced to 5 images to lighten the load
         current_image = X_test[i].reshape((28, 28)) * 255
         prediction = test_predictions[i]
         label = Y_test[i]
