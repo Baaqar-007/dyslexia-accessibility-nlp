@@ -1,0 +1,635 @@
+/* General Reset */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body, html {
+    width: 100%;
+    font-family: 'Inter', sans-serif;
+    background-color: #121212; /* Dark Mode Background */
+    color: #f0f0f0; /* Light Text for Dark Mode */
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    flex-direction: column;
+    min-height: 100vh; /* Ensure body takes at least the full height of the screen */
+    padding: 20px;
+    overflow-x: hidden; /* Prevent horizontal scrolling */
+}
+
+/* Left-align Content */
+.content {
+    width: 100%;
+    max-width: 900px;
+    text-align: left;
+    margin: 0 auto 40px; /* Auto centering with margin bottom */
+}
+
+/* Heading */
+.heading {
+    font-size: 36px;
+    font-weight: 700;
+    color: #e0e0e0;
+    line-height: 1.4;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.heading .highlight {
+    color: #f7ba2b; /* Golden accent for focus */
+}
+
+/* Sub-content */
+.sub-content {
+    font-size: 20px;
+    line-height: 1.8;
+    color: #c0c0c0;
+    margin-bottom: 30px;
+}
+
+.sub-content p {
+    margin-bottom: 15px;
+}
+
+/* Card Styles */
+.card {
+    --background: linear-gradient(to left, #1a1a1a 0%, #333 100%);
+    width: 400px;
+    padding: 20px;
+    border-radius: 1rem;
+    background: var(--background);
+    position: relative;
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    margin: 0 auto; /* Center align the card */
+}
+
+.card::after {
+    position: absolute;
+    content: "";
+    top: 30px;
+    left: 0;
+    right: 0;
+    height: 100%;
+    width: 100%;
+    transform: scale(0.85);
+    filter: blur(20px);
+    background: var(--background);
+    z-index: -1;
+    transition: opacity 0.5s;
+}
+
+.card:hover::after {
+    opacity: 0;
+}
+
+.card-info {
+    --color: #222;
+    background: var(--color);
+    color: #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 30px;
+    border-radius: 1rem;
+    border: 1px solid #444;
+    transition: color 0.3s, border-color 0.3s;
+}
+
+.card:hover .card-info {
+    color: #f7ba2b;
+    border-color: #f7ba2b;
+}
+
+/* Header Styles */
+.header h1 {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 25px;
+    color: inherit;
+    text-align: center;
+}
+
+/* Button Styles */
+.button-container {
+    margin-bottom: 20px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+button {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid #555;
+    border-radius: 5px;
+    background-color: #1a1a1a;
+    color: #f0f0f0;
+    transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s;
+}
+
+button:hover {
+    background-color: #333;
+    border-color: #f7ba2b;
+    transform: scale(1.02);
+}
+
+/* Result Box */
+.result-box {
+    padding: 20px;
+    border: 1px solid #444;
+    border-radius: 5px;
+    background-color: #222;
+    color: #f0f0f0;
+    font-size: 16px;
+    text-align: center;
+}
+
+/* Hero Section */
+.hero {
+    text-align: left;
+    margin: 40px auto;
+    padding: 20px;
+    max-width: 900px;
+    color: #f0f0f0;
+}
+
+.hero-heading {
+    font-size: 32px;
+    font-weight: 700;
+    color: #f7ba2b;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    text-align: center; /* Center align the heading */
+}
+
+.instructions {
+    font-size: 18px;
+    line-height: 1.6;
+    margin-bottom: 30px;
+}
+
+.instructions ol {
+    list-style-position: inside;
+    margin: 0;
+    padding: 0;
+}
+
+.instructions li {
+    margin: 15px 0;
+}
+
+.instruction-box {
+    max-width: 1000px;
+    margin: 10vh   auto;
+    
+    padding: 30px;
+    border: 1px solid #eebc15;
+    border-radius: 10px;
+    background-color: #222;
+    color: #f0f0f0;
+    text-align: left;
+    font-size: 20px;
+    line-height: 1.8;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), 0 0 20px 5px rgba(238, 188, 21, 0.8); /* Glowing effect */
+    transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.instruction-box:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* Custom Cursor */
+body {
+    cursor: none; /* Hide default cursor */
+}
+
+.cursor {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-color: #f7ba2b; /* Yellow color */
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    transition: width 0.2s, height 0.2s;
+}
+
+.cursor-expanded {
+    width: 32px;
+    height: 32px;
+}
+
+/* Advantages Section */
+.advantages-section {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin: 80px auto;
+    max-width: 900px;
+}
+
+.advantages {
+    position: relative;
+    width: 190px;
+    height: 254px;
+    color: #fff;
+    transition: 0.5s;
+    cursor: pointer;
+}
+
+.advantages:hover {
+    transform: translateY(-20px);
+}
+
+.advantages::before {
+    content: '';
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: linear-gradient(45deg, #ffbc00, #ff0058);
+    border-radius: 1.2em;
+}
+
+.advantages::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(45deg, #ffbc00, #ff0058);
+    filter: blur(30px);
+}
+
+.advantages span {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 2;
+    border-radius: 1em;
+}
+
+.advantages .content {
+    position: relative;
+    padding: 10px;
+    z-index: 10;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.2em;
+    text-align: center;
+}
+
+.advantages svg {
+    margin-bottom: 10px;
+}
+
+/* From Uiverse.io by vikas7754 */ 
+.tooltip-container {
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 17px;
+    border-radius: 10px;
+  }
+  
+  .tooltip {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s;
+    border-radius: 15px;
+    box-shadow: inset 5px 5px 5px rgba(0, 0, 0, 0.2),
+      inset -5px -5px 15px rgba(255, 255, 255, 0.1),
+      5px 5px 15px rgba(0, 0, 0, 0.3), -5px -5px 15px rgba(255, 255, 255, 0.1);
+  }
+  
+  .profile {
+    background: #2a2b2f;
+    border-radius: 10px 15px;
+    padding: 10px;
+    border: 1px solid rgba(11, 63, 95, 1);
+  }
+  
+  .tooltip-container:hover .tooltip {
+    top: -150px;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+  
+  .icon {
+    text-decoration: none;
+    color: #fff;
+    display: block;
+    position: relative;
+  }
+  .layer {
+    width: 55px;
+    height: 55px;
+    transition: transform 0.3s;
+  }
+  .icon:hover .layer {
+    transform: rotate(-35deg) skew(20deg);
+  }
+  .layer span {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    border: 1px solid #fff;
+    border-radius: 5px;
+    transition: all 0.3s;
+  }
+  
+  .layer span,
+  .text {
+    color: #1da1f2;
+    border-color: #1da1f2;
+  }
+  
+  .icon:hover.layer span {
+    box-shadow: -1px 1px 3px #1da1f2;
+  }
+  .icon .text {
+    position: absolute;
+    left: 50%;
+    bottom: -5px;
+    opacity: 0;
+    font-weight: 500;
+    transform: translateX(-50%);
+    transition: bottom 0.3s ease, opacity 0.3s ease;
+  }
+  .icon:hover .text {
+    bottom: -35px;
+    opacity: 1;
+  }
+  
+  .icon:hover .layer span:nth-child(1) {
+    opacity: 0.2;
+  }
+  .icon:hover .layer span:nth-child(2) {
+    opacity: 0.4;
+    transform: translate(5px, -5px);
+  }
+  .icon:hover .layer span:nth-child(3) {
+    opacity: 0.6;
+    transform: translate(10px, -10px);
+  }
+  .icon:hover .layer span:nth-child(4) {
+    opacity: 0.8;
+    transform: translate(15px, -15px);
+  }
+  .icon:hover .layer span:nth-child(5) {
+    opacity: 1;
+    transform: translate(20px, -20px);
+  }
+  
+  .layer span.fab {
+    font-size: 30px;
+    line-height: 64px;
+    text-align: center;
+    fill: #1da1f2;
+    background: #000;
+  }
+  .user {
+    display: flex;
+    gap: 10px;
+  }
+  .img {
+    width: 50px;
+    height: 50px;
+    font-size: 25px;
+    font-weight: 700;
+    border: 1px solid #1da1f2;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+  }
+  .name {
+    font-size: 17px;
+    font-weight: 700;
+    color: #1da1f2;
+  }
+  .details {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    color: #fff;
+  }
+  .about {
+    color: #ccc;
+    padding-top: 5px;
+  }
+
+
+  .footer {
+    position: relative;
+    height: 30vh; /* Adjusted height */
+    width: 100%; /* Full width */
+    margin-top: 10vh; /* Top margin */
+    border-radius: 2vh; /* Rounded corners */
+    background: linear-gradient(135deg, #1e1e24 10%, #050505 60%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    animation: gradient-shift 5s ease-in-out infinite; /* Gradient animation */
+    background-size: 200% 200%; /* Gradient shift */
+  }
+  
+  .footer::before,
+  .footer::after {
+    --size: 5px; /* Reduced glow size */
+    content: "";
+    position: absolute;
+    top: calc(var(--size) / -2);
+    left: calc(var(--size) / -2);
+    width: calc(100% + var(--size));
+    height: calc(100% + var(--size));
+    background: radial-gradient(circle at 0 0, hsl(27deg 93% 60%), transparent),
+      radial-gradient(circle at 100% 0, #00a6ff, transparent),
+      radial-gradient(circle at 0 100%, #ff0056, transparent),
+      radial-gradient(circle at 100% 100%, #6500ff, transparent);
+  }
+  
+  .footer::after {
+    --size: 2px; /* Reduced inner glow size */
+    z-index: -1;
+  }
+  
+  .footer::before {
+    --size: 10px; /* Reduced outer glow size */
+    z-index: -2;
+    filter: blur(2vmin); /* Reduced blur */
+    animation: blur-animation 3s ease-in-out alternate infinite; /* Faster blur animation */
+  }
+  
+  @keyframes blur-animation {
+    to {
+      filter: blur(3vmin);
+      transform: scale(1.05);
+    }
+  }
+  
+  @keyframes gradient-shift {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+  
+  .footer {
+    position: relative;
+    height: 15vh; /* Adjusted height */
+    width: 100%; /* Full width */
+    margin-top: 10vh; /* Top margin */
+    border-radius: 2vh; /* Rounded corners */
+    background: linear-gradient(135deg, #1e1e24 10%, #050505 60%); /* Footer background */
+    display: flex;
+    flex-direction: column; /* Column layout for top, center, and bottom */
+    user-select: none;
+    padding: 10px; /* General padding */
+    z-index: 1; /* Ensures content is above border */
+    
+    margin-top: 150px;
+    
+    
+  }
+  
+  .footer::before {
+    content: '';
+    position: absolute;
+    top: -5px; /* Offset for gradient border */
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    border-radius: 2.5vh; /* Match footer's border-radius */
+    background: linear-gradient(135deg, #ff6a00, #ee0979, #662d91, #009ffd); /* Gradient border */
+    z-index: -1; /* Ensure it appears behind the footer */
+    pointer-events: none; /* Prevent interaction */
+  }
+  
+  /* Gradient Animation */
+  @keyframes gradient-shift {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+  
+  .footer::before {
+    animation: gradient-shift 5s ease-in-out infinite; /* Animate gradient border */
+    background-size: 200% 200%; /* Smooth animation */
+  }
+  
+  /* 'About Us' on Top Left */
+  .footer-heading {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-size: 1.5rem;
+    color: white;
+    font-weight: bold;
+    padding: 10px;
+  }
+  
+  /* Footer content center */
+  .footer-content {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+  }
+  
+  /* Connection Section Styling */
+  .connection {
+    display: flex;
+    justify-content: space-around; /* Three elements in a row */
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    padding: 10px;
+  }
+  
+  /* About-container */
+  .about-container {
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 17px;
+    border-radius: 10px;
+    width: 25%; /* Adjust size for three inline elements */
+    /* margin-top: 50px;
+    margin-bottom: 10px; */
+  }
+  
+  .about-container:hover .tooltip {
+    top: -150px;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+  
+  /* Tooltip Styling */
+  .tooltip {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s;
+    border-radius: 15px;
+    box-shadow: inset 5px 5px 5px rgba(0, 0, 0, 0.2),
+      inset -5px -5px 15px rgba(255, 255, 255, 0.1),
+      5px 5px 15px rgba(0, 0, 0, 0.3), -5px -5px 15px rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Icon & Other Tooltip Details */
+  .icon {
+    text-decoration: none;
+    color: #fff;
+    display: block;
+    position: relative;
+  }
+
