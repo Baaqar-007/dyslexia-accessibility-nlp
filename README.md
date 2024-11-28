@@ -1,30 +1,60 @@
 # Dyslexia Accessibility NLP Project
 
-## Project Overview
+## Overview
 
-This project aims to provide a comprehensive solution for dyslexia detection and accessibility improvement through the use of machine learning (ML) and natural language processing (NLP) techniques. The system analyzes handwriting samples to detect dyslexic patterns and classifies characters using both Convolutional Neural Networks (CNN) and Multi-Layer Perceptron (MLP) models. The project also incorporates an NLP model for sequence anomaly detection in textual input, further enhancing its diagnostic capabilities.
+This project provides an integrated solution for detecting and addressing dyslexia through **Machine Learning (ML)** and **Natural Language Processing (NLP)**. It leverages state-of-the-art techniques to analyze handwriting and textual input for dyslexic patterns, enabling early diagnosis and accessibility improvements.
+
+Key features include handwriting analysis using **Convolutional Neural Networks (CNNs)** and **Multi-Layer Perceptrons (MLPs)**, as well as anomaly detection in written text through advanced NLP models. The system is complemented by a user-friendly web interface for seamless interaction and reporting.
+
+---
 
 ## Key Features
 
-- **Handwriting Classification:** Utilizes CNN models to classify handwritten characters into categories, identifying dyslexic patterns such as reversals and normal characters.
-- **Dyslexia Detection:** By combining MLP-based character classification with CNN for letter pattern recognition, the system identifies dyslexic tendencies and provides detailed reports.
-- **NLP Model for Sequence Anomaly Detection:** A sequence model trained to detect anomalies in textual patterns, helping to analyze dyslexic writing further.
-- **User Interface:** A Flask-based frontend allows users to upload images, interact with the system, and view the analysis results in real time, including a downloadable PDF report with an analysis of character classification and sequence anomalies.
+### 1. **Handwriting Classification**
+- CNN-based models identify handwritten characters and detect patterns such as reversals, omissions, or misalignments indicative of dyslexia.
+
+### 2. **Dyslexia Detection**
+- Combines MLP-based character classification with CNN-driven letter pattern recognition to identify dyslexic tendencies.
+- Generates detailed analysis reports for educators and professionals.
+
+### 3. **Sequence Anomaly Detection with NLP**
+- NLP models trained to recognize textual sequence anomalies, aiding in the analysis of dyslexic writing patterns.
+- Includes LSTM-based models (work in progress).
+
+### 4. **Interactive User Interface**
+- A **Flask**-powered web application for uploading handwriting samples or text inputs.
+- Displays real-time analysis results with downloadable PDF reports.
+
+---
 
 ## Applications
 
-- **Educational Tools:** Assistive technology for identifying dyslexic tendencies in students' handwriting.
-- **Accessibility Enhancements:** Provides tailored interventions and accommodations for users with dyslexia, aiding in more effective learning environments.
-- **Diagnostic Tool:** Used by educators, therapists, and healthcare professionals to diagnose dyslexia early and provide personalized treatment.
+- **Educational Tools**: Assistive technology for educators to identify dyslexic patterns in students’ handwriting.
+- **Accessibility Enhancements**: Provides tailored recommendations for users with dyslexia, improving learning outcomes.
+- **Diagnostic Aid**: Supports early diagnosis for therapists, educators, and healthcare professionals, enabling personalized interventions.
+
+---
 
 ## Technologies Used
 
-- **Machine Learning:** TensorFlow (Keras) for training CNN and MLP models.
-- **Natural Language Processing:** Sequence anomaly detection using LSTM-based models.[Needs more work]
-- **Interface:** Flask for the web interface.
-- **PDF Generation:** ReportLab for generating detailed reports.
-- **Image Processing:** OpenCV for character extraction from images.
+| **Category**            | **Technology**               |
+|--------------------------|------------------------------|
+| **Machine Learning**     | TensorFlow (Keras), CNN, MLP |
+| **Natural Language Processing** | LSTM-based sequence models |
+| **Web Framework**        | Flask                        |
+| **PDF Reporting**        | ReportLab                    |
+| **Image Processing**     | OpenCV for character extraction |
+
+---
+
+## Future Work
+
+- Expand NLP capabilities for sequence anomaly detection.
+- Optimize models for improved accuracy and performance.
+- Enhance the web interface for accessibility and usability.
+
+---
 
 ## Conclusion
 
-This project aims to improve accessibility and provide a practical tool for diagnosing dyslexia. It combines advanced machine learning models with NLP techniques to create an intuitive and functional solution that serves a broad range of educational and diagnostic purposes.
+This project merges ML and NLP to deliver a robust tool for dyslexia detection and accessibility improvement. By combining cutting-edge technology with a user-centric approach, it offers a practical solution for educators, therapists, and researchers aiming to enhance learning environments and provide timely diagnoses.
