@@ -17,9 +17,9 @@ Key features include handwriting analysis using **Convolutional Neural Networks 
 - Combines MLP-based character classification with CNN-driven letter pattern recognition to identify dyslexic tendencies.
 - Generates detailed analysis reports for educators and professionals.
 
-### 3. **Sequence Anomaly Detection with NLP**
+### 3. **Sequence Anomaly Detection with NLP (work in progress)**
 - NLP models trained to recognize textual sequence anomalies, aiding in the analysis of dyslexic writing patterns.
-- Includes LSTM-based models (work in progress).
+- Includes LSTM-based models.
 
 ### 4. **Interactive User Interface**
 - A **Flask**-powered web application for uploading handwriting samples or text inputs.
