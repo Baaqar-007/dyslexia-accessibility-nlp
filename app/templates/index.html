@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dyslexia Detection</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, html {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            background: linear-gradient(135deg, #6a11cb, #2575fc);
+            background-size: 400% 400%;
+            animation: gradient-shift 10s ease infinite;
+        }
+
+        @keyframes gradient-shift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .container {
+            max-width: 600px;
+            width: 90%;
+            padding: 30px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            text-align: left;
+            color: #2c3e50;
+            font-size: 36px;
+            margin-bottom: 15px;
+        }
+
+        .header p {
+            text-align: left;
+            color: #7f8c8d;
+            font-size: 18px;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        button {
+            display: block;
+            width: 80%;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            color: #ffffff;
+            margin: 10px auto;
+            transition: background-color 0.3s;
+        }
+
+        #uploadButton {
+            background-color: #3498db;
+        }
+
+        #uploadButton:hover {
+            background-color: #2980b9;
+        }
+
+        #detectButton {
+            background-color: #2ecc71;
+        }
+
+        #detectButton:hover {
+            background-color: #27ae60;
+        }
+
+        #downloadButton {
+            background-color: #e67e22;
+        }
+
+        #downloadButton:hover {
+            background-color: #d35400;
+        }
+
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            color: #333;
+            text-align: center;
+            font-size: 20px;
+        }
+
+        .loader {
+            display: none;
+            margin: 20px auto;
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 28px;
+            }
+
+            button {
+                font-size: 14px;
+                padding: 10px;
+            }
+
+            .result-box {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Dyslexia Detection</h1>
+            <p>This tool assists in detecting signs of dyslexia from handwriting samples. 
+               Upload an image of handwritten text, and our advanced AI model will analyze 
+               it to provide insights. Early detection can be instrumental in providing 
+               the right support and resources.</p>
+        </div>
+        
+        <input type="file" id="upload" accept="image/*" hidden>
+        
+        <button id="uploadButton">📤 Upload Image</button>
+        <button id="detectButton">🔍 Find Dyslexia</button>
+        <button id="downloadButton" style="display: none;">📄 Download Report</button>
+        
+        <div id="resultBox" class="result-box" style="display: none;">
+            <p id="resultText">Result will appear here.</p>
+        </div>
+        <div id="loader" class="loader"></div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+
+        // Trigger file upload
+        document.getElementById('uploadButton').addEventListener('click', () => {
+            document.getElementById('upload').click();
+        });
+
+        // Store uploaded file
+        document.getElementById('upload').addEventListener('change', function (event) {
+            selectedFile = event.target.files[0];
+            document.getElementById('resultText').innerText = `Image uploaded: ${selectedFile.name}`;
+        });
+
+        // Process dyslexia detection
+        document.getElementById('detectButton').addEventListener('click', async () => {
+            if (!selectedFile) {
+                alert('Please upload an image first.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+
+            showLoader();
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const result = await response.json();
+                hideLoader();
+
+                const resultText = document.getElementById('resultText');
+                if (result.result === "Dyslexia Detected") {
+                    resultText.style.color = 'red';
+                    resultText.innerText = 'Dyslexia Detected';
+                } else if (result.result === "Dyslexia Not Detected, Normal reports") {
+                    resultText.style.color = 'green';
+                    resultText.innerText = 'Dyslexia Not Detected';
+                } else {
+                    resultText.style.color = 'black';
+                    resultText.innerText = `Result: ${result.result}`;
+                }
+
+                // Show download button if report is available
+                document.getElementById('downloadButton').style.display = 'block';
+            } catch (error) {
+                console.error('Error:', error);
+                hideLoader();
+                document.getElementById('resultText').innerText = 'Error: Could not retrieve result.';
+            }
+        });
+
+        // Download report
+        document.getElementById('downloadButton').addEventListener('click', () => {
+            window.location.href = '/download_report';
+        });
+
+        // Show loader and hide result box
+        function showLoader() {
+            document.getElementById('loader').style.display = 'block';
+            document.getElementById('resultBox').style.display = 'none';
+        }
+
+        // Hide loader and show result box
+        function hideLoader() {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('resultBox').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
