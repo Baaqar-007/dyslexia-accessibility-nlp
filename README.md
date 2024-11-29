@@ -54,7 +54,33 @@ Key features include handwriting analysis using **Convolutional Neural Networks 
 - Enhance the web interface for accessibility and usability.
 
 ---
+## Dataset
 
+This project utilizes a variety of datasets designed for handwriting analysis and dyslexia detection:
+
+1. **EMNIST Dataset**  
+   - An extension of the MNIST dataset, comprising 814,255 images of handwritten digits and letters across 62 classes.  
+   - Widely used for handwriting anomaly detection, particularly in uppercase and lowercase letters.
+
+2. **NIST Special Database 19**  
+   - A large dataset of handwritten characters collected from over 500 writers.  
+   - Forms the foundation for MNIST and EMNIST, supporting advanced optical character recognition (OCR) tasks.
+
+3. **Dyslexia-Specific Handwriting Samples**  
+   - Datasets focused on dyslexic writing patterns, including mirrored letters, reversals, and omissions.  
+   - Collected from primary school children and used in studies employing CNN and SVM models for dyslexia detection.
+
+---
 ## Conclusion
 
 This project merges ML and NLP to deliver a robust tool for dyslexia detection and accessibility improvement. By combining cutting-edge technology with a user-centric approach, it offers a practical solution for educators, therapists, and researchers aiming to enhance learning environments and provide timely diagnoses.
+
+---
+
+## References
+
+- Cohen, G., Afshar, S., Tapson, J., & van Schaik, A. (2017). *EMNIST: An Extension of MNIST to Handwritten Letters*. Western Sydney University.  
+- Alqahtani, N. D., Alzahrani, B., & Ramzan, M. S. (2023). *Detection of Dyslexia Through Images of Handwriting Using Hybrid AI Approach*. International Journal of Advanced Computer Science and Applications (IJACSA).  
+- Isa, I. S., Rahimi, W. N. S., Ramlan, S. A., & Sulaiman, S. N. (2019). *Automated Detection of Dyslexia Symptom Based on Handwriting Image for Primary School Children*. Procedia Computer Science.  
+
+
