@@ -20,9 +20,10 @@ app = Flask(__name__, template_folder='templates')
 # ----------------------------- Constants -----------------------------
 
 # Model Paths
-CNN_MODEL_PATH = 'models/pattern_classifier.h5'
 MLP_MODEL_PATH = 'models/mlp_model.pkl'
 NLP_MODEL_PATH = 'models/sequence_anomaly.h5'
+CNN_MODEL_PATH = 'models/pattern_classifier.h5'
+
 
 # Other Paths
 OUTPUT_DIR = "output"
@@ -35,8 +36,8 @@ IMG_WIDTH, IMG_HEIGHT = 64, 64
 
 # ---------------------------- Load Models ----------------------------
 
-cnn_model = load_model(CNN_MODEL_PATH)
 mlp_model = joblib.load(MLP_MODEL_PATH)
+cnn_model = load_model(CNN_MODEL_PATH)
 nlp_model = load_model(NLP_MODEL_PATH)
 
 # ------------------------- Helper Functions --------------------------
@@ -240,4 +241,4 @@ def download_report():
     return jsonify({'error': 'Report not found'}), 404
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=501, debug=True)
+    app.run(host='0.0.0.0', port=501, debug=True, use_reloader=False)
