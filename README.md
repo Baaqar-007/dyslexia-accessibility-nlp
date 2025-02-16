@@ -6,6 +6,8 @@ This project provides an integrated solution for detecting and addressing dyslex
 
 Key features include handwriting analysis using **Convolutional Neural Networks (CNNs)** and **Multi-Layer Perceptrons (MLPs)**, as well as anomaly detection in written text through advanced NLP models. The system is complemented by a user-friendly web interface for seamless interaction and reporting.
 
+[Check it out for yourself.](https://react-front-dyslexia-latest.onrender.com/)
+
 ---
 
 ## Key Features
