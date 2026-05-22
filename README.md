@@ -1,88 +1,119 @@
-# Dyslexia Accessibility NLP Project
+# Dyslexia Accessibility NLP
 
-## Overview
-
-This project provides an integrated solution for detecting and addressing dyslexia through **Machine Learning (ML)** and **Natural Language Processing (NLP)**. It leverages state-of-the-art techniques to analyze handwriting and textual input for dyslexic patterns, enabling early diagnosis and accessibility improvements.
-
-Key features include handwriting analysis using **Convolutional Neural Networks (CNNs)** and **Multi-Layer Perceptrons (MLPs)**, as well as anomaly detection in written text through advanced NLP models. The system is complemented by a user-friendly web interface for seamless interaction and reporting.
-
-[Check it out for yourself.](https://react-front-dyslexia-latest.onrender.com/)
+An end-to-end handwriting analysis system for dyslexia screening. Three models work together in a weighted ensemble to detect indicators of dyslexia: an MLP letter classifier, a CNN reversal detector, and a Bidirectional LSTM sequence anomaly detector.
 
 ---
 
-## Key Features
+## Project Structure
 
-### 1. **Handwriting Classification**
-- CNN-based models identify handwritten characters and detect patterns such as reversals, omissions, or misalignments indicative of dyslexia.
+```
+dyslexia-accessibility-nlp/
+│
+├── Beta Versions/           ← Original iterative development history
+│   ├── Letter_Classification/
+│   ├── Dyslexic_Detection/
+│   ├── nlp_module.py
+│   └── README.md
+│
+├── data/                    ← Data loading, preprocessing, augmentation
+│   ├── preprocessing.py      · EMNIST loader (orientation fix), stratified splits
+│   ├── augmentation.py       · CNN ImageDataGenerator factories
+│   └── nlp_data_generator.py  · Synthetic dyslexia sequence data generator
+│
+├── models/                  ← Model definitions and training scripts
+│   ├── mlp_classifier.py     · 3-layer MLP (512→256→128), Adam, early stop
+│   ├── cnn_classifier.py     · 3-block Conv2D CNN with BN + Dropout
+│   ├── nlp_sequence.py       · Bidirectional 2-layer LSTM anomaly detector
+│   └── ensemble.py           · Weighted ensemble logic
+│
+├── evaluation/
+│   └── benchmark.py          · F1, AUC, confusion matrix, reversal-pair analysis
+│
+├── data/raw/                ← Raw datasets (gitignored)
+│   ├── emnist-letters-train.csv
+│   ├── emnist-letters-test.csv
+│   └── Gambo/
+│       ├── Train/{Normal,Reversal}/
+│       └── Test/{Normal,Reversal}/
+│
+├── config.py                ← Source of truth: paths, hyperparameters, thresholds
+├── train_all.py             ← Master training orchestrator
+├── requirements.txt
+└── .gitignore
 
-### 2. **Dyslexia Detection**
-- Combines MLP-based character classification with CNN-driven letter pattern recognition to identify dyslexic tendencies.
-- Generates detailed analysis reports for educators and professionals.
-
-### 3. **Sequence Anomaly Detection with NLP (work in progress)**
-- NLP models trained to recognize textual sequence anomalies, aiding in the analysis of dyslexic writing patterns.
-- Includes LSTM-based models.
-
-### 4. **Interactive User Interface**
-- A **Flask**-powered web application for uploading handwriting samples or text inputs.
-- Displays real-time analysis results with downloadable PDF reports.
-
----
-
-## Applications
-
-- **Educational Tools**: Assistive technology for educators to identify dyslexic patterns in students’ handwriting.
-- **Accessibility Enhancements**: Provides tailored recommendations for users with dyslexia, improving learning outcomes.
-- **Diagnostic Aid**: Supports early diagnosis for therapists, educators, and healthcare professionals, enabling personalized interventions.
-
----
-
-## Technologies Used
-
-| **Category**            | **Technology**               |
-|--------------------------|------------------------------|
-| **Machine Learning**     | TensorFlow (Keras), CNN, MLP |
-| **Natural Language Processing** | LSTM-based sequence models |
-| **Web Framework**        | Flask                        |
-| **PDF Reporting**        | ReportLab                    |
-| **Image Processing**     | OpenCV for character extraction |
-
----
-
-## Future Work
-
-- Expand NLP capabilities for sequence anomaly detection.
-- Optimize models for improved accuracy and performance.
-- Enhance the web interface for accessibility and usability.
-
----
-## Dataset
-
-This project utilizes a variety of datasets designed for handwriting analysis and dyslexia detection:
-
-1. **EMNIST Dataset**  
-   - An extension of the MNIST dataset, comprising 814,255 images of handwritten digits and letters across 62 classes.  
-   - Widely used for handwriting anomaly detection, particularly in uppercase and lowercase letters.
-
-2. **NIST Special Database 19**  
-   - A large dataset of handwritten characters collected from over 500 writers.  
-   - Forms the foundation for MNIST and EMNIST, supporting advanced optical character recognition (OCR) tasks.
-
-3. **Dyslexia-Specific Handwriting Samples**  
-   - Datasets focused on dyslexic writing patterns, including mirrored letters, reversals, and omissions.  
-   - Collected from primary school children and used in studies employing CNN and SVM models for dyslexia detection.
-
----
-## Conclusion
-
-This project merges ML and NLP to deliver a robust tool for dyslexia detection and accessibility improvement. By combining cutting-edge technology with a user-centric approach, it offers a practical solution for educators, therapists, and researchers aiming to enhance learning environments and provide timely diagnoses.
+```
 
 ---
 
-## References
+## Setup & Training
 
-- Cohen, G., Afshar, S., Tapson, J., & van Schaik, A. (2017). *EMNIST: An Extension of MNIST to Handwritten Letters*. Western Sydney University.  
-- Alqahtani, N. D., Alzahrani, B., & Ramzan, M. S. (2023). *Detection of Dyslexia Through Images of Handwriting Using Hybrid AI Approach*. International Journal of Advanced Computer Science and Applications (IJACSA).  
-- Isa, I. S., Rahimi, W. N. S., Ramlan, S. A., & Sulaiman, S. N. (2019). *Automated Detection of Dyslexia Symptom Based on Handwriting Image for Primary School Children*. Procedia Computer Science.  
+```bash
+# 1. Create and activate virtual environment
+python -m venv .venv
+source .venv/bin/activate
 
+# 2. Install dependencies
+pip install -r requirements.txt
 
+# 3. Train models using integer flags
+# 1: MLP, 2: CNN, 3: NLP
+python train_all.py 1 2 3    # Trains all three models
+python train_all.py 1        # Trains only the MLP letter classifier
+python train_all.py 2 3      # Trains CNN and NLP models
+
+```
+
+---
+
+## Datasets
+
+| Dataset | Purpose | Source |
+| --- | --- | --- |
+| **EMNIST Letters** | MLP letter classifier (A–Z) | [NIST Database](https://www.nist.gov/itl/products-and-services/emnist-dataset) |
+| **Gambo** | CNN reversal detector | [Kaggle: Dyslexia Dataset (Corrected)](https://www.kaggle.com/datasets/menna0mahrous0/dyslexia-datasetcorrected-normal-reversal) |
+| **Synthetic Sequences** | NLP LSTM | Auto-generated via `nlp_data_generator.py` |
+
+---
+
+## Model Performance
+
+Based on internal benchmarking using the full datasets:
+
+| Model | Accuracy | ROC-AUC | F1-Score |
+| --- | --- | --- | --- |
+| **MLP (Letter)** | 88.75% | _ | 0.8873 (Weighted) |
+| **CNN (Reversal)** | 91.86% | 0.9758 | 0.9118 (Reversal) |
+| **NLP (Sequence)** | 93.17% | 0.9763 | 0.9285 (Anomaly) |
+
+*Detailed metrics including confusion matrices are available in `output/benchmarks/`.*
+
+---
+
+## Key Improvements Over Beta Versions
+
+| Area | Beta | Improved |
+| --- | --- | --- |
+| **Data Handling** | Raw EMNIST (rotated/mirrored) | Automated orientation correction |
+| **Normalization** | None | `StandardScaler` fitted on train split and persisted |
+| **MLP Depth** | Single layer `(250,)` | Three layers `(512, 256, 128)` |
+| **CNN Architecture** | Flat Dense ANN | 3-block Conv2D with BatchNorm |
+| **NLP Architecture** | Single LSTM (32) | Bidirectional 2-layer LSTM |
+| **NLP Sequence** | `max_len=5` | `max_len=20` for better context |
+| **Evaluation** | Accuracy only | F1, AUC, and reversal-pair analysis |
+
+---
+
+## Referenced Research
+
+This project implements methodologies discussed in the following literature:
+
+* **Alqahtani, N. D., et al. (2023).** "Detection of Dyslexia Through Images of Handwriting using Hybrid AI Approach." *International Journal of Advanced Computer Science and Applications (IJACSA)*.
+* **Alqahtani, N. D., et al. (2023).** "Deep Learning Applications for Dyslexia Prediction." *Applied Sciences*.
+* **Isa, I. S., et al. (2019).** "Automated Detection of Dyslexia Symptom Based on Handwriting Image for Primary School Children." *Procedia Computer Science*.
+* **Cohen, G., et al. (2017).** "EMNIST: an extension of MNIST to handwritten letters." *arXiv:1702.05373*.
+
+---
+
+## Disclaimer
+
+This tool is a **screening aid for educational and research purposes only**. It does not constitute a medical or psychological diagnosis. Always consult a qualified educational psychologist for clinical assessment.
