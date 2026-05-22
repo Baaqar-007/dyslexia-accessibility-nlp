@@ -1,0 +1,29 @@
+# ── Core ML ───────────────────────────────────────────────────────────────────
+scikit-learn>=1.4.0,<2.0.0
+joblib>=1.3.0
+
+# ── PyTorch (GPU) — install the CUDA build for your driver from pytorch.org ──
+# CPU-only fallback (will work but CNN/NLP will be slow):
+#   pip install torch torchvision
+# CUDA 12.x (recommended):
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+torch>=2.2.0
+torchvision>=0.17.0
+
+# ── Data handling ─────────────────────────────────────────────────────────────
+numpy>=1.26.0,<2.0.0
+pandas>=2.1.0
+
+# ── Computer vision ───────────────────────────────────────────────────────────
+opencv-python-headless>=4.9.0
+Pillow>=10.2.0
+
+# ── Web framework ─────────────────────────────────────────────────────────────
+Flask>=3.0.0
+Werkzeug>=3.0.0
+
+# ── PDF generation ────────────────────────────────────────────────────────────
+reportlab>=4.1.0
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+tqdm>=4.66.0
