@@ -16,6 +16,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 from typing import Optional, Tuple
+from tqdm import tqdm
 
 import joblib
 import numpy as np
@@ -161,9 +162,9 @@ def load_gambo(
             if not class_dir.exists():
                 logger.warning("Missing directory: %s", class_dir)
                 continue
-            for p in sorted(class_dir.iterdir()):
-                if p.suffix.lower() not in {".png", ".jpg", ".jpeg"}:
-                    continue
+            all_files = [p for p in sorted(class_dir.iterdir())
+            if p.suffix.lower() in {".png", ".jpg", ".jpeg"}]
+            for p in tqdm(all_files, desc=f"  {class_name}", unit="img", leave=False):
                 img = cv2.imread(str(p), cv2.IMREAD_GRAYSCALE)
                 if img is None:
                     logger.warning("Could not read: %s", p)

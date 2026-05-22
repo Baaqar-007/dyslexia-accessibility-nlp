@@ -10,6 +10,7 @@ import logging
 import time
 from copy import deepcopy
 from pathlib import Path
+from tqdm import tqdm
 
 import numpy as np
 import torch
@@ -17,7 +18,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.cuda.amp import GradScaler, autocast
+from torch.cuda.amp import autocast
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -94,10 +95,9 @@ def train(
     model     = DyslexiaCNN().to(device)
     optimizer = Adam(model.parameters(), lr=lr)
     scheduler = ReduceLROnPlateau(optimizer, mode="min", factor=0.5,
-                                  patience=patience // 2, verbose=True)
+                                  patience=patience // 2)
     criterion = nn.BCEWithLogitsLoss()
-    scaler    = GradScaler(enabled=use_amp)
-
+    scaler    = torch.amp.GradScaler("cuda", enabled=use_amp)
     best_val_loss  = float("inf")
     best_weights   = None
     no_improve     = 0
@@ -110,7 +110,8 @@ def train(
         # ── Train ────────────────────────────────────────────────────────────
         model.train()
         train_loss, train_correct, n = 0.0, 0, 0
-        for X_batch, y_batch in train_loader:
+        for X_batch, y_batch in tqdm(train_loader, desc=f"  Epoch {epoch:3d}/{epochs} [train]",
+                              leave=False, unit="batch"):            
             X_batch = X_batch.to(device, non_blocking=True)
             y_batch = y_batch.to(device, non_blocking=True)
 
@@ -133,7 +134,8 @@ def train(
         model.eval()
         val_loss, val_correct, nv = 0.0, 0, 0
         with torch.no_grad():
-            for X_batch, y_batch in val_loader:
+            for X_batch, y_batch in tqdm(val_loader, desc=f"  Epoch {epoch:3d}/{epochs} [val]",
+                                  leave=False, unit="batch"):
                 X_batch = X_batch.to(device, non_blocking=True)
                 y_batch = y_batch.to(device, non_blocking=True)
                 with autocast(enabled=use_amp):
@@ -147,11 +149,11 @@ def train(
         val_acc   = val_correct / nv
         scheduler.step(val_loss)
 
-        logger.info(
-            "Epoch %3d/%d  train_loss=%.4f  train_acc=%.4f  "
-            "val_loss=%.4f  val_acc=%.4f",
-            epoch, epochs, train_loss, train_acc, val_loss, val_acc,
-        )
+        summary = (f"Epoch {epoch:3d}/{epochs}  "
+           f"train_loss={train_loss:.4f}  train_acc={train_acc:.4f}  "
+           f"val_loss={val_loss:.4f}  val_acc={val_acc:.4f}")
+        tqdm.write(summary)
+        logger.info(summary)
         history["train_loss"].append(train_loss)
         history["train_acc"].append(train_acc)
         history["val_loss"].append(val_loss)
@@ -186,18 +188,27 @@ def load_cnn(path: Path = Paths.CNN_MODEL) -> DyslexiaCNN:
     return model
 
 
-def predict_batch(model: DyslexiaCNN, imgs: np.ndarray) -> np.ndarray:
+def predict_batch(model: DyslexiaCNN, imgs: np.ndarray,
+                  batch_size: int = 64) -> np.ndarray:
     """
     imgs : float32 (N, 64, 64) or (N, 64, 64, 1) normalised [0,1]
     returns: float32 (N,) reversal probabilities
+
+    Processes in chunks of batch_size to avoid OOM on low-VRAM GPUs.
     """
     device = next(model.parameters()).device
     if imgs.ndim == 4:
         imgs = imgs[:, :, :, 0]          # (N, H, W, 1) → (N, H, W)
-    t = torch.from_numpy(imgs).unsqueeze(1).to(device)   # (N, 1, H, W)
+
+    all_probs = []
     with torch.no_grad():
-        probs = model(t).sigmoid().cpu().numpy()
-    return probs.astype(np.float32)
+        for i in range(0, len(imgs), batch_size):
+            chunk = imgs[i : i + batch_size]
+            t     = torch.from_numpy(chunk).unsqueeze(1).to(device)
+            probs = model(t).sigmoid().cpu().numpy()
+            all_probs.append(probs)
+
+    return np.concatenate(all_probs).astype(np.float32)
 
 
 # ---------------------------------------------------------------------------

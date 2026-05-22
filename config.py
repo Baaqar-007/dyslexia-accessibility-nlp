@@ -18,8 +18,8 @@ class Paths:
     DATA_RAW       = ROOT / "data" / "raw"
     EMNIST_TRAIN   = DATA_RAW / "emnist-letters-train.csv"
     EMNIST_TEST    = DATA_RAW / "emnist-letters-test.csv"
-    GAMBO_TRAIN    = ROOT / "Beta Versions" / "Dyslexic_Detection" / "dataset" / "Gambo" / "Train"
-    GAMBO_TEST     = ROOT / "Beta Versions" / "Dyslexic_Detection" / "dataset" / "Gambo" / "Test"
+    GAMBO_TRAIN    = DATA_RAW / "Gambo" / "Train"
+    GAMBO_TEST     = DATA_RAW / "Gambo" / "Test"
     NLP_DATA       = DATA_RAW / "sequence_data.txt"  # auto-generated if absent
 
     # Saved models -----------------------------------------------------------

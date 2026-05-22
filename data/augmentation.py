@@ -53,8 +53,11 @@ def make_loaders(
     X_train: np.ndarray, y_train: np.ndarray,
     X_val:   np.ndarray, y_val:   np.ndarray,
     batch_size: int = 64,
-    num_workers: int = 2,
 ) -> Tuple[DataLoader, DataLoader]:
+    import platform
+    # Windows can't spawn worker processes from a script not wrapped in
+    # __main__, so num_workers must be 0. Linux/Mac can use workers safely.
+    num_workers = 0 if platform.system() == "Windows" else 2
     train_ds = GamboDataset(X_train, y_train, augment=True)
     val_ds   = GamboDataset(X_val,   y_val,   augment=False)
     train_loader = DataLoader(train_ds, batch_size=batch_size,
