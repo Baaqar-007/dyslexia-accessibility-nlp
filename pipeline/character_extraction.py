@@ -48,15 +48,6 @@ class ExtractedCharacter:
     bbox:       Tuple[int, int, int, int]   # (x, y, w, h) in original image
 
 
-def _auto_invert(binary: np.ndarray) -> np.ndarray:
-    """
-    Ensure the image is dark-text-on-white-background.
-    If more than half the pixels are dark (0), the image is already inverted.
-    """
-    if np.mean(binary) < 127:
-        return cv2.bitwise_not(binary)
-    return binary
-
 
 def extract_characters(image_path: str) -> List[ExtractedCharacter]:
     """
@@ -95,7 +86,7 @@ def extract_characters(image_path: str) -> List[ExtractedCharacter]:
     )
 
     # Ensure consistent polarity (white chars on black)
-    binary = _auto_invert(binary)
+    # binary = _auto_invert(binary)
 
     # ---- 4. Morphological closing (reconnect broken strokes) -----------------
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
@@ -103,6 +94,15 @@ def extract_characters(image_path: str) -> List[ExtractedCharacter]:
 
     # ---- 5. Find external contours ------------------------------------------
     contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Fallback: if adaptive threshold found nothing, try Otsu global threshold
+    if not contours:
+        logger.warning("Adaptive threshold found no contours — trying Otsu fallback")
+        _, binary = cv2.threshold(
+            img_denoised, 0, 255,
+            cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
+        )
+        contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     # ---- 6. Filter by area ratio and aspect ratio ---------------------------
     valid = []

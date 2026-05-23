@@ -95,15 +95,16 @@ class NLPConfig:
 # Character extraction — OpenCV pipeline
 # ---------------------------------------------------------------------------
 class CharExtractionConfig:
-    # Adaptive threshold (Gaussian-weighted, block must be odd)
-    ADAPTIVE_BLOCK  = 15
-    ADAPTIVE_C      = 10
-    # Contour area bounds as fraction of total image area
-    MIN_AREA_RATIO  = 0.0003
-    MAX_AREA_RATIO  = 0.06
-    # Width/height aspect ratio limits
-    MIN_ASPECT      = 0.15
-    MAX_ASPECT      = 2.20
+    # Adaptive threshold — larger block handles uneven lighting better
+    ADAPTIVE_BLOCK  = 25
+    ADAPTIVE_C      = 8
+    # Area ratio bounds — loosened for small/large characters and
+    # varying image resolutions
+    MIN_AREA_RATIO  = 0.00005
+    MAX_AREA_RATIO  = 0.20
+    # Aspect ratio — loosened for narrow letters (I, l) and wide ones (W, M)
+    MIN_ASPECT      = 0.05
+    MAX_ASPECT      = 5.0
     # Output sizes for each model
     MLP_SIZE        = 28
     CNN_SIZE        = 64
