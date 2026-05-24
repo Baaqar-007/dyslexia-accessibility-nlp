@@ -1,234 +1,812 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dyslexia Detection</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dyslexia Screening — Handwriting Analysis</title>
 
-        body, html {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-            background: linear-gradient(135deg, #6a11cb, #2575fc);
-            background-size: 400% 400%;
-            animation: gradient-shift 10s ease infinite;
-        }
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
 
-        @keyframes gradient-shift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
+  <style>
+    /* ── Design tokens ── */
+    :root {
+      --ink:        #0d1117;
+      --ink-mid:    #4a5568;
+      --ink-light:  #9aa5b4;
+      --canvas:     #f7f6f2;
+      --paper:      #fffffe;
+      --rule:       #e8e6e0;
 
-        .container {
-            max-width: 600px;
-            width: 90%;
-            padding: 30px;
-            background-color: rgba(255, 255, 255, 0.9);
-            border-radius: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
+      --accent:     #1a6b5c;
+      --accent-lt:  #e8f4f1;
+      --warn:       #b45309;
+      --warn-lt:    #fef3c7;
+      --danger:     #991b1b;
+      --danger-lt:  #fee2e2;
 
-        .header h1 {
-            text-align: left;
-            color: #2c3e50;
-            font-size: 36px;
-            margin-bottom: 15px;
-        }
+      --r-sm:  6px;
+      --r-md: 12px;
+      --r-lg: 20px;
 
-        .header p {
-            text-align: left;
-            color: #7f8c8d;
-            font-size: 18px;
-            margin-bottom: 25px;
-            line-height: 1.5;
-        }
+      --shadow-card: 0 1px 3px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.05);
+      --shadow-lift: 0 8px 32px rgba(0,0,0,.12);
+    }
 
-        button {
-            display: block;
-            width: 80%;
-            padding: 12px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            border: none;
-            border-radius: 8px;
-            color: #ffffff;
-            margin: 10px auto;
-            transition: background-color 0.3s;
-        }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        #uploadButton {
-            background-color: #3498db;
-        }
+    html { scroll-behavior: smooth; }
 
-        #uploadButton:hover {
-            background-color: #2980b9;
-        }
+    body {
+      font-family: 'Lato', sans-serif;
+      font-weight: 400;
+      background: var(--canvas);
+      color: var(--ink);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
 
-        #detectButton {
-            background-color: #2ecc71;
-        }
+    /* ── Grain overlay ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
 
-        #detectButton:hover {
-            background-color: #27ae60;
-        }
+    /* ── Layout ── */
+    .wrapper {
+      position: relative; z-index: 1;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
 
-        #downloadButton {
-            background-color: #e67e22;
-        }
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: flex-end;
+      gap: 16px;
+      margin-bottom: 48px;
+    }
+    .header-mark {
+      width: 44px; height: 44px;
+      background: var(--ink);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .header-mark svg { width: 22px; height: 22px; fill: var(--paper); }
+    .header-text h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      line-height: 1.1;
+      letter-spacing: -.02em;
+    }
+    .header-text h1 em {
+      font-style: italic;
+      color: var(--accent);
+    }
+    .header-text p {
+      font-size: .85rem;
+      color: var(--ink-mid);
+      margin-top: 4px;
+    }
 
-        #downloadButton:hover {
-            background-color: #d35400;
-        }
+    /* ── Cards ── */
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: var(--r-lg);
+      box-shadow: var(--shadow-card);
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+    .card-label {
+      font-family: 'DM Mono', monospace;
+      font-size: .72rem;
+      font-weight: 500;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--ink-light);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-label::before {
+      content: '';
+      display: block;
+      width: 20px; height: 1px;
+      background: var(--rule);
+    }
 
-        .result-box {
-            margin-top: 20px;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background-color: #f8f9fa;
-            color: #333;
-            text-align: center;
-            font-size: 20px;
-        }
+    /* ── Upload zone ── */
+    .drop-zone {
+      border: 2px dashed var(--rule);
+      border-radius: var(--r-md);
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+    }
+    .drop-zone:hover,
+    .drop-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-lt);
+    }
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0;
+      opacity: 0; cursor: pointer;
+      width: 100%; height: 100%;
+    }
+    .drop-icon {
+      width: 48px; height: 48px;
+      margin: 0 auto 12px;
+      background: var(--canvas);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid var(--rule);
+    }
+    .drop-icon svg { width: 22px; height: 22px; stroke: var(--ink-mid); }
+    .drop-zone h3 { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+    .drop-zone p  { font-size: .85rem; color: var(--ink-mid); }
 
-        .loader {
-            display: none;
-            margin: 20px auto;
-            border: 8px solid #f3f3f3;
-            border-top: 8px solid #3498db;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-        }
+    /* Preview strip */
+    .preview-strip {
+      display: none;
+      align-items: center;
+      gap: 14px;
+      padding: 14px;
+      background: var(--canvas);
+      border-radius: var(--r-sm);
+      margin-top: 16px;
+    }
+    .preview-strip.visible { display: flex; }
+    .preview-thumb {
+      width: 60px; height: 60px;
+      object-fit: cover;
+      border-radius: var(--r-sm);
+      border: 1px solid var(--rule);
+    }
+    .preview-name {
+      font-family: 'DM Mono', monospace;
+      font-size: .8rem;
+      color: var(--ink-mid);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .preview-remove {
+      width: 28px; height: 28px;
+      border: none; background: none; cursor: pointer;
+      color: var(--ink-light);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s, color .15s;
+    }
+    .preview-remove:hover { background: var(--danger-lt); color: var(--danger); }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+    /* ── Analyse button ── */
+    .btn-analyse {
+      width: 100%;
+      padding: 14px 24px;
+      font-family: 'Lato', sans-serif;
+      font-weight: 700;
+      font-size: .95rem;
+      letter-spacing: .04em;
+      color: var(--paper);
+      background: var(--ink);
+      border: none;
+      border-radius: var(--r-md);
+      cursor: pointer;
+      transition: transform .15s, box-shadow .15s, background .15s;
+      margin-top: 16px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-analyse:hover:not(:disabled) {
+      background: var(--accent);
+      box-shadow: var(--shadow-lift);
+      transform: translateY(-1px);
+    }
+    .btn-analyse:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-analyse svg { width: 18px; height: 18px; }
 
-        @media (max-width: 600px) {
-            .header h1 {
-                font-size: 28px;
-            }
+    /* ── Spinner ── */
+    .spinner-wrap {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      padding: 32px 0;
+    }
+    .spinner-wrap.active { display: flex; }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--rule);
+      border-top-color: var(--ink);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner-wrap p {
+      font-size: .85rem; color: var(--ink-mid);
+      font-family: 'DM Mono', monospace;
+    }
 
-            button {
-                font-size: 14px;
-                padding: 10px;
-            }
+    /* ── Result banner ── */
+    .result-banner {
+      display: none;
+      border-radius: var(--r-md);
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      animation: slideUp .4s ease-out;
+    }
+    .result-banner.visible { display: flex; align-items: center; gap: 16px; }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .result-banner.detected    { background: var(--danger-lt); border: 1px solid #fca5a5; }
+    .result-banner.no-detected { background: var(--accent-lt); border: 1px solid #6ee7b7; }
+    .result-banner.inconclusive{ background: var(--warn-lt);   border: 1px solid #fcd34d; }
+    .banner-icon {
+      width: 40px; height: 40px; flex-shrink: 0;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .detected     .banner-icon { background: var(--danger); }
+    .no-detected  .banner-icon { background: var(--accent); }
+    .inconclusive .banner-icon { background: var(--warn); }
+    .banner-icon svg { width: 20px; height: 20px; stroke: white; }
+    .banner-label {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.25rem;
+    }
+    .banner-sub {
+      font-size: .82rem;
+      color: var(--ink-mid);
+      margin-top: 2px;
+    }
 
-            .result-box {
-                font-size: 18px;
-            }
-        }
-    </style>
+    /* ── Score cards row ── */
+    .scores-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .score-card {
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: var(--r-md);
+      padding: 20px;
+      text-align: center;
+    }
+    .score-value {
+      font-family: 'DM Serif Display', serif;
+      font-size: 2rem;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .score-label {
+      font-family: 'DM Mono', monospace;
+      font-size: .7rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--ink-light);
+    }
+
+    /* Score bar */
+    .score-bar-wrap { margin-bottom: 24px; }
+    .score-bar-track {
+      height: 10px;
+      background: var(--rule);
+      border-radius: 99px;
+      overflow: visible;
+      position: relative;
+      margin: 8px 0 6px;
+    }
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width .8s cubic-bezier(.4,0,.2,1);
+      width: 0%;
+    }
+    .score-bar-fill.safe   { background: var(--accent); }
+    .score-bar-fill.amber  { background: var(--warn); }
+    .score-bar-fill.risk   { background: var(--danger); }
+    .score-bar-threshold {
+      position: absolute;
+      top: -3px; bottom: -3px;
+      width: 3px;
+      background: var(--ink);
+      border-radius: 99px;
+      left: 40%; /* matches DYSLEXIA_THRESHOLD = 0.40 */
+    }
+    .score-bar-labels {
+      display: flex;
+      justify-content: space-between;
+      font-family: 'DM Mono', monospace;
+      font-size: .68rem;
+      color: var(--ink-light);
+    }
+
+    /* ── Character table ── */
+    .char-table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .83rem;
+    }
+    th {
+      font-family: 'DM Mono', monospace;
+      font-size: .68rem;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      color: var(--ink-light);
+      font-weight: 500;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--rule);
+    }
+    td {
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--rule);
+      color: var(--ink-mid);
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: var(--canvas); }
+    .char-letter {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.3rem;
+      color: var(--ink);
+    }
+    .tag-reversal {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--danger-lt);
+      color: var(--danger);
+      border: 1px solid #fca5a5;
+      border-radius: 99px;
+      padding: 1px 8px;
+      font-size: .72rem;
+      font-family: 'DM Mono', monospace;
+      font-weight: 500;
+    }
+    .tag-normal {
+      display: inline-flex;
+      color: var(--ink-light);
+      font-size: .72rem;
+      font-family: 'DM Mono', monospace;
+    }
+    .conf-bar {
+      display: inline-block;
+      height: 6px;
+      background: var(--rule);
+      border-radius: 99px;
+      vertical-align: middle;
+      position: relative;
+      width: 60px;
+    }
+    .conf-bar::after {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      border-radius: 99px;
+      background: var(--accent);
+      width: var(--fill, 50%);
+    }
+
+    /* ── Sequence pill ── */
+    .sequence-pill {
+      font-family: 'DM Mono', monospace;
+      font-size: .9rem;
+      background: var(--canvas);
+      border: 1px solid var(--rule);
+      border-radius: var(--r-sm);
+      padding: 10px 16px;
+      letter-spacing: .14em;
+      word-break: break-all;
+      color: var(--ink);
+      margin-top: 8px;
+    }
+
+    /* ── Download button ── */
+    .btn-download {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 22px;
+      font-family: 'Lato', sans-serif;
+      font-weight: 700;
+      font-size: .85rem;
+      color: var(--ink);
+      background: var(--paper);
+      border: 1.5px solid var(--rule);
+      border-radius: var(--r-md);
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color .15s, box-shadow .15s, transform .15s;
+      margin-top: 16px;
+    }
+    .btn-download:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 2px 8px rgba(26,107,92,.12);
+      transform: translateY(-1px);
+    }
+    .btn-download svg { width: 16px; height: 16px; }
+
+    /* ── Disclaimer ── */
+    .disclaimer {
+      text-align: center;
+      font-size: .78rem;
+      color: var(--ink-light);
+      padding: 0 24px;
+      line-height: 1.7;
+      margin-top: 8px;
+    }
+
+    /* ── Error state ── */
+    .error-box {
+      display: none;
+      padding: 16px;
+      background: var(--danger-lt);
+      border: 1px solid #fca5a5;
+      border-radius: var(--r-md);
+      font-size: .85rem;
+      color: var(--danger);
+      margin-top: 16px;
+    }
+    .error-box.visible { display: block; }
+
+    /* ── Hidden initially ── */
+    .results-section { display: none; }
+    .results-section.visible { display: block; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Dyslexia Detection</h1>
-            <p>This tool assists in detecting signs of dyslexia from handwriting samples. 
-               Upload an image of handwritten text, and our advanced AI model will analyze 
-               it to provide insights. Early detection can be instrumental in providing 
-               the right support and resources.</p>
-        </div>
-        
-        <input type="file" id="upload" accept="image/*" hidden>
-        
-        <button id="uploadButton">📤 Upload Image</button>
-        <button id="detectButton">🔍 Find Dyslexia</button>
-        <button id="downloadButton" style="display: none;">📄 Download Report</button>
-        
-        <div id="resultBox" class="result-box" style="display: none;">
-            <p id="resultText">Result will appear here.</p>
-        </div>
-        <div id="loader" class="loader"></div>
+<div class="wrapper">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    <div class="header-text">
+      <h1>Dyslexia <em>Screening</em></h1>
+      <p>Automated handwriting analysis · MLP · CNN · NLP ensemble</p>
+    </div>
+  </header>
+
+  <!-- Upload card -->
+  <div class="card" id="upload-card">
+    <div class="card-label">Upload Handwriting Sample</div>
+
+    <div class="drop-zone" id="drop-zone">
+      <input type="file" id="file-input" accept=".png,.jpg,.jpeg,.bmp,.tiff" />
+      <div class="drop-icon">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+      </div>
+      <h3>Drop an image here</h3>
+      <p>PNG, JPG, BMP, TIFF — up to 10 MB</p>
     </div>
 
-    <script>
-        let selectedFile = null;
+    <!-- Preview strip -->
+    <div class="preview-strip" id="preview-strip">
+      <img id="preview-thumb" src="" alt="" class="preview-thumb" />
+      <span class="preview-name" id="preview-name"></span>
+      <button class="preview-remove" id="preview-remove" title="Remove">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
 
-        // Trigger file upload
-        document.getElementById('uploadButton').addEventListener('click', () => {
-            document.getElementById('upload').click();
-        });
+    <div class="error-box" id="error-box"></div>
 
-        // Store uploaded file
-        document.getElementById('upload').addEventListener('change', function (event) {
-            selectedFile = event.target.files[0];
-            document.getElementById('resultText').innerText = `Image uploaded: ${selectedFile.name}`;
-        });
+    <!-- Spinner -->
+    <div class="spinner-wrap" id="spinner">
+      <div class="spinner"></div>
+      <p id="spinner-label">Extracting characters…</p>
+    </div>
 
-        // Process dyslexia detection
-        document.getElementById('detectButton').addEventListener('click', async () => {
-            if (!selectedFile) {
-                alert('Please upload an image first.');
-                return;
-            }
+    <button class="btn-analyse" id="btn-analyse" disabled>
+      <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714a2.25 2.25 0 001.357 2.059l.537.268a2.25 2.25 0 001.357.2l1.45-.725m-5.7-9.256c.251.023.501.05.75.082M11.25 3.186A24.254 24.254 0 0112 3c.818 0 1.624.042 2.415.125m0 0v5.714a2.25 2.25 0 001.357 2.059l.537.268a2.25 2.25 0 001.357.2"/></svg>
+      Analyse Handwriting
+    </button>
+  </div>
 
-            const formData = new FormData();
-            formData.append('file', selectedFile);
+  <!-- Results section (hidden until analysis complete) -->
+  <div class="results-section" id="results-section">
 
-            showLoader();
+    <!-- Result banner -->
+    <div class="result-banner" id="result-banner">
+      <div class="banner-icon">
+        <svg id="banner-icon-svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"></svg>
+      </div>
+      <div>
+        <div class="banner-label" id="banner-label"></div>
+        <div class="banner-sub"  id="banner-sub"></div>
+      </div>
+    </div>
 
-            try {
-                const response = await fetch('/upload', {
-                    method: 'POST',
-                    body: formData,
-                });
+    <!-- Score cards -->
+    <div class="scores-row">
+      <div class="score-card">
+        <div class="score-value" id="sc-ensemble">—</div>
+        <div class="score-label">Ensemble Score</div>
+      </div>
+      <div class="score-card">
+        <div class="score-value" id="sc-reversal">—</div>
+        <div class="score-label">Reversal Rate</div>
+      </div>
+      <div class="score-card">
+        <div class="score-value" id="sc-nlp">—</div>
+        <div class="score-label">NLP Anomaly</div>
+      </div>
+      <div class="score-card">
+        <div class="score-value" id="sc-uncertainty">—</div>
+        <div class="score-label">MLP Uncertainty</div>
+      </div>
+    </div>
 
-                const result = await response.json();
-                hideLoader();
+    <!-- Score bar -->
+    <div class="card score-bar-wrap">
+      <div class="card-label">Ensemble Score Distribution</div>
+      <div class="score-bar-track">
+        <div class="score-bar-fill" id="score-fill"></div>
+        <div class="score-bar-threshold" title="Decision threshold (0.40)"></div>
+      </div>
+      <div class="score-bar-labels">
+        <span>0.0</span>
+        <span>◂ threshold: 0.40 ▸</span>
+        <span>1.0</span>
+      </div>
+    </div>
 
-                const resultText = document.getElementById('resultText');
-                if (result.result === "Dyslexia Detected") {
-                    resultText.style.color = 'red';
-                    resultText.innerText = 'Dyslexia Detected';
-                } else if (result.result === "Dyslexia Not Detected, Normal reports") {
-                    resultText.style.color = 'green';
-                    resultText.innerText = 'Dyslexia Not Detected';
-                } else {
-                    resultText.style.color = 'black';
-                    resultText.innerText = `Result: ${result.result}`;
-                }
+    <!-- Detected sequence -->
+    <div class="card">
+      <div class="card-label">Predicted Letter Sequence</div>
+      <div id="char-count" style="font-size:.82rem;color:var(--ink-mid);margin-bottom:4px;"></div>
+      <div class="sequence-pill" id="sequence-pill"></div>
+    </div>
 
-                // Show download button if report is available
-                document.getElementById('downloadButton').style.display = 'block';
-            } catch (error) {
-                console.error('Error:', error);
-                hideLoader();
-                document.getElementById('resultText').innerText = 'Error: Could not retrieve result.';
-            }
-        });
+    <!-- Character table -->
+    <div class="card" id="char-table-card">
+      <div class="card-label">Per-Character Analysis</div>
+      <div class="char-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Letter</th>
+              <th>MLP Confidence</th>
+              <th>Reversal Prob.</th>
+              <th>Verdict</th>
+            </tr>
+          </thead>
+          <tbody id="char-tbody"></tbody>
+        </table>
+      </div>
+    </div>
 
-        // Download report
-        document.getElementById('downloadButton').addEventListener('click', () => {
-            window.location.href = '/download_report';
-        });
+    <!-- Download -->
+    <div class="card" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div style="font-weight:700;font-size:.95rem;">PDF Report</div>
+        <div style="font-size:.82rem;color:var(--ink-mid);margin-top:2px;">
+          Full analysis with recommendations — expires in 5 minutes
+        </div>
+      </div>
+      <a id="download-link" href="#" class="btn-download" target="_blank" style="display:none;">
+        <svg fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+        Download Report
+      </a>
+    </div>
 
-        // Show loader and hide result box
-        function showLoader() {
-            document.getElementById('loader').style.display = 'block';
-            document.getElementById('resultBox').style.display = 'none';
-        }
+  </div><!-- /results-section -->
 
-        // Hide loader and show result box
-        function hideLoader() {
-            document.getElementById('loader').style.display = 'none';
-            document.getElementById('resultBox').style.display = 'block';
-        }
-    </script>
+  <p class="disclaimer">
+    This tool is a screening aid for educational &amp; research purposes only.<br>
+    It does not constitute a medical or psychological diagnosis.
+  </p>
+
+</div><!-- /wrapper -->
+
+<script>
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+let selectedFile = null;
+
+const $  = id => document.getElementById(id);
+const pct = v  => (v * 100).toFixed(1) + '%';
+
+// ---------------------------------------------------------------------------
+// File selection
+// ---------------------------------------------------------------------------
+$('file-input').addEventListener('change', e => {
+  handleFile(e.target.files[0]);
+});
+
+const dz = $('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', ()  => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('drag-over');
+  handleFile(e.dataTransfer.files[0]);
+});
+
+$('preview-remove').addEventListener('click', clearFile);
+
+function handleFile(file) {
+  if (!file) return;
+  const allowed = ['image/png','image/jpeg','image/bmp','image/tiff'];
+  if (!allowed.includes(file.type)) {
+    showError('Unsupported file type. Please upload PNG, JPG, BMP, or TIFF.');
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    showError('File exceeds the 10 MB limit.');
+    return;
+  }
+  selectedFile = file;
+  hideError();
+  hideResults();
+
+  // Thumbnail
+  const reader = new FileReader();
+  reader.onload = ev => { $('preview-thumb').src = ev.target.result; };
+  reader.readAsDataURL(file);
+  $('preview-name').textContent = file.name;
+  $('preview-strip').classList.add('visible');
+  $('btn-analyse').disabled = false;
+}
+
+function clearFile() {
+  selectedFile = null;
+  $('file-input').value = '';
+  $('preview-strip').classList.remove('visible');
+  $('preview-thumb').src = '';
+  $('btn-analyse').disabled = true;
+  hideResults();
+  hideError();
+}
+
+// ---------------------------------------------------------------------------
+// Analysis
+// ---------------------------------------------------------------------------
+$('btn-analyse').addEventListener('click', async () => {
+  if (!selectedFile) return;
+
+  setLoading(true);
+  hideResults();
+  hideError();
+
+  const steps = [
+    'Extracting characters…',
+    'Running MLP classifier…',
+    'Running CNN reversal detector…',
+    'Running NLP sequence analysis…',
+    'Computing ensemble score…',
+    'Generating PDF report…',
+  ];
+  let si = 0;
+  const stepTimer = setInterval(() => {
+    $('spinner-label').textContent = steps[Math.min(si++, steps.length - 1)];
+  }, 1400);
+
+  try {
+    const fd = new FormData();
+    fd.append('file', selectedFile);
+
+    const res  = await fetch('/upload', { method: 'POST', body: fd });
+    const data = await res.json();
+
+    clearInterval(stepTimer);
+
+    if (!res.ok || data.error) {
+      showError(data.error || 'An unexpected error occurred.');
+      return;
+    }
+    renderResults(data);
+  } catch (err) {
+    clearInterval(stepTimer);
+    showError('Network error — please try again.');
+  } finally {
+    setLoading(false);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Render
+// ---------------------------------------------------------------------------
+function renderResults(d) {
+  // Banner
+  const banner = $('result-banner');
+  banner.className = 'result-banner visible';
+  if (d.result === 'Dyslexia Detected') {
+    banner.classList.add('detected');
+    $('banner-icon-svg').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>';
+    $('banner-sub').textContent = `Confidence: ${d.confidence_label} · Score: ${pct(d.ensemble_score)}`;
+  } else if (d.result === 'No Dyslexia Detected') {
+    banner.classList.add('no-detected');
+    $('banner-icon-svg').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>';
+    $('banner-sub').textContent = `Confidence: ${d.confidence_label} · Score: ${pct(d.ensemble_score)}`;
+  } else {
+    banner.classList.add('inconclusive');
+    $('banner-icon-svg').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/>';
+    $('banner-sub').textContent = d.message || 'Insufficient data for a reliable result.';
+  }
+  $('banner-label').textContent = d.result;
+
+  // Score cards
+  $('sc-ensemble').textContent   = pct(d.ensemble_score);
+  $('sc-reversal').textContent   = pct(d.reversal_rate);
+  $('sc-nlp').textContent        = pct(d.nlp_anomaly_score);
+  $('sc-uncertainty').textContent = pct(d.mlp_uncertainty);
+
+  // Score bar
+  const fill = $('score-fill');
+  const pctVal = d.ensemble_score * 100;
+  fill.style.width = '0%';
+  setTimeout(() => { fill.style.width = pctVal + '%'; }, 60);
+  fill.className = 'score-bar-fill ' + (
+    pctVal < 35 ? 'safe' : pctVal < 55 ? 'amber' : 'risk'
+  );
+
+  // Sequence
+  $('char-count').textContent = `${d.num_characters} character${d.num_characters !== 1 ? 's' : ''} detected`;
+  $('sequence-pill').textContent = d.predicted_sequence || '(none)';
+
+  // Per-character table
+  const tbody = $('char-tbody');
+  tbody.innerHTML = '';
+  (d.per_character || []).forEach(c => {
+    const confPct = Math.round(c.mlp_confidence * 100);
+    tbody.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td style="color:var(--ink-light);font-family:'DM Mono',monospace;font-size:.75rem;">${c.index + 1}</td>
+        <td><span class="char-letter">${c.letter}</span></td>
+        <td>
+          <span class="conf-bar" style="--fill:${confPct}%"></span>
+          <span style="font-family:'DM Mono',monospace;font-size:.75rem;margin-left:6px;">${confPct}%</span>
+        </td>
+        <td style="font-family:'DM Mono',monospace;font-size:.78rem;">${pct(c.reversal_prob)}</td>
+        <td>${c.is_reversal
+          ? '<span class="tag-reversal">⚑ Reversal</span>'
+          : '<span class="tag-normal">Normal</span>'
+        }</td>
+      </tr>
+    `);
+  });
+
+  // PDF download
+  if (d.pdf_url) {
+    const dl = $('download-link');
+    dl.href = d.pdf_url;
+    dl.style.display = 'inline-flex';
+  }
+
+  $('results-section').classList.add('visible');
+  $('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ---------------------------------------------------------------------------
+// UI helpers
+// ---------------------------------------------------------------------------
+function setLoading(on) {
+  $('spinner').classList.toggle('active', on);
+  $('btn-analyse').disabled = on;
+}
+function showError(msg) {
+  const b = $('error-box');
+  b.textContent = msg;
+  b.classList.add('visible');
+}
+function hideError() { $('error-box').classList.remove('visible'); }
+function hideResults() { $('results-section').classList.remove('visible'); }
+</script>
 </body>
 </html>

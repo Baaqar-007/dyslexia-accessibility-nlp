@@ -150,6 +150,34 @@ def _make_anomalous(word: str, cfg=Cfg) -> str:
         word = _apply_insertion(word)
     return word
 
+def _simulate_mlp_noise(word: str, noise_rate: float = 0.10) -> str:
+    """
+    Simulate the MLP's ~10% natural misclassification rate on real
+    handwriting. Applied to BOTH normal and anomalous training sequences
+    so the LSTM learns to distinguish dyslexic patterns above this noise
+    baseline — not just any deviation from clean text.
+
+    Substitutions are restricted to visually similar character pairs
+    (common MLP confusion pairs at 28x28 resolution).
+    """
+    SIMILAR = {
+        'c': 'e', 'e': 'c',
+        'i': 'j', 'j': 'i',
+        'u': 'v', 'v': 'u',
+        'n': 'm', 'm': 'n',
+        'a': 'o', 'o': 'a',
+        'h': 'n',
+        'f': 't', 't': 'f',
+        'l': 'i',
+    }
+    result = []
+    for ch in word:
+        if ch in SIMILAR and random.random() < noise_rate:
+            result.append(SIMILAR[ch])
+        else:
+            result.append(ch)
+    return "".join(result)
+
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -161,35 +189,45 @@ def generate_sequences(
     seed: int = Cfg.RANDOM_SEED,
 ) -> Tuple[List[str], List[int]]:
     """
-    Generate balanced Normal (label=0) and Anomalous (label=1) sequences.
+    Generates sequences that simulate what the LSTM actually receives
+    at inference — the MLP's decoded letter predictions from real images,
+    not clean text.
 
-    Each sequence is built by joining 1-4 random words, giving character-level
-    sequences of realistic length (3-20 chars, matching NLPConfig.MAX_SEQ_LEN).
+    Normal (label=0):
+        English words + MLP confusion noise only.
+        Represents non-dyslexic handwriting as the MLP decodes it.
 
-    Returns
-    -------
-    sequences : list of strings
-    labels    : list of ints (0=normal, 1=anomalous)
+    Anomalous (label=1):
+        Same words + MLP confusion noise + dyslexic transformations.
+        Represents dyslexic handwriting as the MLP decodes it.
+
+    Training on this distribution forces the LSTM to learn the difference
+    between baseline MLP noise (unavoidable, present in both classes) and
+    dyslexic error patterns on top of that noise — which is the exact
+    distinction it needs to make at inference time.
     """
     random.seed(seed)
     np.random.seed(seed)
 
-    def _sample_words(n: int) -> str:
+    def _sample_words() -> str:
         k = random.randint(1, 4)
         return "".join(random.sample(_WORDS, min(k, len(_WORDS))))
 
     sequences, labels = [], []
 
     for _ in range(n_normal):
-        sequences.append(_sample_words(1))
+        base  = _sample_words()
+        noisy = _simulate_mlp_noise(base)       # MLP noise only
+        sequences.append(noisy)
         labels.append(0)
 
     for _ in range(n_anomalous):
-        base = _sample_words(1)
-        sequences.append(_make_anomalous(base))
+        base     = _sample_words()
+        noisy    = _simulate_mlp_noise(base)    # MLP noise first
+        dyslexic = _make_anomalous(noisy)       # dyslexic transforms on top
+        sequences.append(dyslexic)
         labels.append(1)
 
-    # Shuffle together
     combined = list(zip(sequences, labels))
     random.shuffle(combined)
     sequences, labels = zip(*combined)

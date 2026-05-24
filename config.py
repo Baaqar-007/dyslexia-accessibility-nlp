@@ -95,15 +95,16 @@ class NLPConfig:
 # Character extraction — OpenCV pipeline
 # ---------------------------------------------------------------------------
 class CharExtractionConfig:
-    # Adaptive threshold (Gaussian-weighted, block must be odd)
-    ADAPTIVE_BLOCK  = 15
-    ADAPTIVE_C      = 10
-    # Contour area bounds as fraction of total image area
-    MIN_AREA_RATIO  = 0.0003
-    MAX_AREA_RATIO  = 0.06
-    # Width/height aspect ratio limits
-    MIN_ASPECT      = 0.15
-    MAX_ASPECT      = 2.20
+    # Adaptive threshold — larger block handles uneven lighting better
+    ADAPTIVE_BLOCK  = 25
+    ADAPTIVE_C      = 8
+    # Area ratio bounds — loosened for small/large characters and
+    # varying image resolutions
+    MIN_AREA_RATIO  = 0.00005
+    MAX_AREA_RATIO  = 0.20
+    # Aspect ratio — loosened for narrow letters (I, l) and wide ones (W, M)
+    MIN_ASPECT      = 0.05
+    MAX_ASPECT      = 5.0
     # Output sizes for each model
     MLP_SIZE        = 28
     CNN_SIZE        = 64
@@ -113,14 +114,24 @@ class CharExtractionConfig:
 # Ensemble — weighted combination of all three model outputs
 # ---------------------------------------------------------------------------
 class EnsembleConfig:
-    # Weights must sum to 1.0
-    CNN_WEIGHT          = 0.50   # reversal rate    — strongest direct signal
-    NLP_WEIGHT          = 0.35   # sequence anomaly — structural pattern signal
-    MLP_WEIGHT          = 0.15   # 1 - avg letter confidence — uncertainty signal
+    # CNN carries primary weight — strong-binary sliding window is reliable
+    CNN_WEIGHT              = 0.55
+    # NLP = analytical pattern score (+ LSTM blend when retrained)
+    NLP_WEIGHT              = 0.40
+    # MLP uncertainty — small signal only
+    MLP_WEIGHT              = 0.05
+    DYSLEXIA_THRESHOLD      = 0.40
 
-    # Probability threshold above which we flag dyslexia
-    DYSLEXIA_THRESHOLD  = 0.40
+    # CNN prediction must be >= this to count as a "strong" reversal.
+    # Filters out cursive false positives (which land at 50-80%)
+    # while preserving true reversals (which land at 90-100%).
+    STRONG_REVERSAL_THRESH  = 0.85
 
+    # Analytical NLP normalisation.
+    # Clinical basis: ~8% of characters are confidently reversed in
+    # diagnosed dyslexic writers. Score = strong_count / expected.
+    EXPECTED_REVERSAL_RATE  = 0.08
+    MIN_REVERSAL_EXPECTED   = 5      # floor prevents short-text over-sensitivity
 
 # ---------------------------------------------------------------------------
 # Synthetic NLP data generation

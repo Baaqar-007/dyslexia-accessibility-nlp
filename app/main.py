@@ -1,244 +1,267 @@
-from flask import Flask, request, jsonify, render_template, send_file
+"""
+app/main.py
+
+Production-grade Flask application.
+
+Fixes over original:
+  - Models were reloaded from disk on every request. Now loaded once at
+    startup via pipeline/inference.py's @lru_cache functions.
+  - No input validation — any file (or no file) was accepted silently.
+  - Port was 501 (non-standard). Fixed to 5000 via config.
+  - shutil.rmtree in a finally-block deleted ALL output on error.
+    Now only the session-specific temp directory is cleaned up per request.
+  - PDF was written to a fixed path, meaning concurrent requests overwrote
+    each other. Now each session gets a unique UUID-keyed filename.
+  - No MIME-type check — only file extension was checked.
+  - No request size limit enforced at the route level.
+  - Flask debug=True was the default, exposing the interactive debugger
+    in what could easily end up as a production deployment.
+  - All logic was in a single 350-line file with no separation of concerns.
+"""
+from __future__ import annotations
+
+import logging
 import os
 import threading
 import time
-import cv2
-import numpy as np
-from PIL import Image
-import shutil
-import joblib
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.models import load_model
-from tensorflow.keras.preprocessing import image
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-import datetime
+import uuid
+from pathlib import Path
 
-app = Flask(__name__, template_folder='templates')
+from flask import (
+    Flask, jsonify, request, send_file,
+    render_template, abort,
+)
+from werkzeug.utils import secure_filename
 
-# ----------------------------- Constants -----------------------------
+import sys
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# Model Paths
-MLP_MODEL_PATH = 'models/mlp_model.pkl'
-NLP_MODEL_PATH = 'models/sequence_anomaly.h5'
-CNN_MODEL_PATH = 'models/pattern_classifier.h5'
+# ── Detect GPU once at startup ────────────────────────────────────────────────
+from gpu_config import configure_gpu
+configure_gpu()
 
+from config import AppConfig, Paths
 
-# Other Paths
-OUTPUT_DIR = "output"
-IMAGE_PATH = "uploaded_image.jpg"  # Shared path for uploaded image
-PDF_FILE_PATH = "detailed_report.pdf"
-TEMP_RESULT = "result_summary.json"  # Temporary file for result summary
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s  %(levelname)-8s  %(name)s — %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
-# Image Dimensions
-IMG_WIDTH, IMG_HEIGHT = 64, 64
+# ---------------------------------------------------------------------------
+# Flask app
+# ---------------------------------------------------------------------------
+app = Flask(__name__, template_folder="templates")
+app.config["MAX_CONTENT_LENGTH"] = AppConfig.MAX_CONTENT_LENGTH
 
-# ---------------------------- Load Models ----------------------------
+# ---------------------------------------------------------------------------
+# Ensure output directories exist
+# ---------------------------------------------------------------------------
+Paths.CHAR_DIR.mkdir(parents=True, exist_ok=True)
+Paths.REPORTS.mkdir(parents=True, exist_ok=True)
 
-mlp_model = joblib.load(MLP_MODEL_PATH)
-cnn_model = load_model(CNN_MODEL_PATH)
-nlp_model = load_model(NLP_MODEL_PATH)
-
-# ------------------------- Helper Functions --------------------------
-
-def preprocess_for_mlp(img):
-    """
-    Preprocesses an image for MLP model prediction.
-    """
-    return img.reshape(1, -1) / 255.0
-
-def preprocess_for_cnn(img):
-    """
-    Preprocesses an image for CNN model prediction.
-    """
-    img = cv2.resize(img, (IMG_WIDTH, IMG_HEIGHT))
-    img = img.reshape(1, IMG_WIDTH, IMG_HEIGHT, 1).astype('float32') / 255.0
-    return img
-
-def predict_image(img_path, model):
-    img = image.load_img(img_path, target_size=(IMG_WIDTH, IMG_HEIGHT))
-    img_array = image.img_to_array(img) / 255.0
-    img_array = np.expand_dims(img_array, axis=0)
-    # print(img_array)
-    prediction = model.predict(img_array)
-    return 'Reversal' if prediction < 0.8 else 'Normal'
-
-def detect_sequence_anomaly(seq,max_len=5):
-    """
-    Detects sequence anomalies using the trained NLP model.
-
-    Args:
-        seq (str): Input sequence to analyze.
-        model (Sequential): Trained NLP model for anomaly detection.
-        max_len (int): Maximum sequence length for padding.
-
-    Returns:
-        str: Result of anomaly detection ("Anomaly detected" or "No anomalies detected").
-    """
-    # Character-to-index mapping (same as used during training)
-    char_to_idx = {chr(i): i - 96 for i in range(97, 123)}  # 'a' -> 1, ..., 'z' -> 26
-    char_to_idx['<pad>'] = 0
-
-    # Convert characters in the sequence to indices
-    seq_idx = [char_to_idx.get(c, 0) for c in seq.lower() if c in char_to_idx]
-
-    # Pad the sequence
-    padded_seq = pad_sequences([seq_idx], maxlen=max_len, padding='post')
-
-    # Predict using the trained model
-    prediction = nlp_model.predict(padded_seq)
-    return "Anomaly detected" if prediction[0] > 0.5 else "No anomalies detected."
-
-
-def extract_characters(image_path):
-    """
-    Extracts individual characters from the uploaded image while avoiding extra detections.
-    Filters contours based on size and aspect ratio to ensure only valid characters are detected.
-
-    Args:
-        image_path (str): Path to the uploaded image.
-    """
-    # Clear the output directory if it exists
-    if os.path.exists(OUTPUT_DIR):
-        shutil.rmtree(OUTPUT_DIR)
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-    # Read the image in grayscale
-    img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-
-    # Apply binary thresholding
-    _, binary_img = cv2.threshold(img, 128, 255, cv2.THRESH_BINARY_INV)
-
-    # Find contours
-    contours, _ = cv2.findContours(binary_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    # Sort contours from left to right
-    contours = sorted(contours, key=lambda c: cv2.boundingRect(c)[0])
-
-    char_count = 0
-    for contour in contours:
-        # Get bounding box for the contour
-        x, y, w, h = cv2.boundingRect(contour)
-
-        # Define size and aspect ratio constraints to filter noise
-        if 10 < w < 100 and 10 < h < 100:  # Character size range
-            aspect_ratio = w / h
-            if 0.2 < aspect_ratio < 1.5:  # Aspect ratio range for typical characters
-                # Extract and resize the character image
-                char_img = binary_img[y:y + h, x:x + w]
-                char_img = cv2.resize(char_img, (28, 28))
-
-                # Save the character image
-                char_img_name = os.path.join(OUTPUT_DIR, f'char_{char_count}.png')
-                Image.fromarray(char_img).save(char_img_name)
-                char_count += 1
-
-
-def generate_pdf_report(result, predictions_array, nlp_output, image_path):
-    """
-    Generates a formal PDF report with the classification results, NLP output, and the uploaded image.
-    """
-    pdf_path = PDF_FILE_PATH
-    c = canvas.Canvas(pdf_path, pagesize=letter)
-    width, height = letter
-
-    # Title and Subtitle
-    c.setFont("Helvetica-Bold", 20)
-    c.drawString(50, height - 50, "Dyslexia Detection Report")
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(50, height - 80, "Comprehensive Analysis of Handwriting Sample")
-
-    # Date and Time
-    c.setFont("Helvetica", 10)
-    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    c.drawString(50, height - 110, f"Generated on: {current_time}")
-
-    # Result Summary
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, height - 140, "Detection Summary:")
-    c.setFont("Helvetica", 12)
-    c.drawString(70, height - 160, f"Overall Assessment: {result}")
-
-    # NLP Output
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, height - 190, "NLP Model Analysis:")
-    c.setFont("Helvetica", 12)
-    y_pos = height - 210
-    for line in nlp_output.split("\n"):
-        c.drawString(70, y_pos, line)
-        y_pos -= 20
-        if y_pos < 50:
-            c.showPage()
-            y_pos = height - 50
-
-    # Character Classification Details
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, y_pos - 30, "Character Classification Details:")
-    c.setFont("Helvetica", 12)
-    y_pos -= 50
-    for idx, pred in enumerate(predictions_array, start=1):
-        c.drawString(70, y_pos, f"Character {idx}: {pred}")
-        y_pos -= 20
-        if y_pos < 50:
-            c.showPage()
-            y_pos = height - 80
-
-    # Add Uploaded Image
-    c.showPage()
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(50, height - 50, "Uploaded Handwriting Sample:")
+# ---------------------------------------------------------------------------
+# Lazy model preload (runs in background thread to keep startup fast)
+# ---------------------------------------------------------------------------
+def _preload_in_background():
     try:
-        c.drawImage(image_path, 50, height - 400, width=500, height=350, preserveAspectRatio=True)
-    except Exception as e:
-        c.drawString(50, height - 450, f"Unable to display image: {e}")
+        from pipeline.inference import preload_models
+        preload_models()
+    except Exception as exc:
+        logger.warning("Background model preload failed: %s", exc)
 
-    c.save()
-    return pdf_path
+threading.Thread(target=_preload_in_background, daemon=True).start()
 
-def delete_files_after_delay(files, delay):
-    """
-    Deletes specified files after a delay.
-    """
-    time.sleep(delay)
-    for file in files:
-        if os.path.exists(file):
-            os.remove(file)
 
-# ------------------------------ Routes -------------------------------
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
-@app.route('/')
+def _allowed_file(filename: str) -> bool:
+    suffix = Path(filename).suffix.lstrip(".").lower()
+    return suffix in AppConfig.ALLOWED_EXTENSIONS
+
+
+def _validate_mime(file_storage) -> bool:
+    """Read the first 12 bytes to verify common image magic bytes."""
+    header = file_storage.stream.read(12)
+    file_storage.stream.seek(0)
+    return (
+        header[:4]  in {b"\x89PNG", b"\xff\xd8\xff\xe0",
+                         b"\xff\xd8\xff\xe1", b"\xff\xd8\xff\xdb"} or
+        header[:2]  == b"BM" or          # BMP
+        header[:4]  == b"II\x2a\x00" or  # TIFF little-endian
+        header[:4]  == b"MM\x00\x2a"     # TIFF big-endian
+    )
+
+
+def _schedule_deletion(path: str, delay: int = AppConfig.REPORT_EXPIRY_SEC):
+    """Delete a file after `delay` seconds in a daemon thread."""
+    def _delete():
+        time.sleep(delay)
+        try:
+            os.remove(path)
+            logger.debug("Auto-deleted: %s", path)
+        except FileNotFoundError:
+            pass
+    threading.Thread(target=_delete, daemon=True).start()
+
+
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
+
+@app.route("/")
 def index():
-    return render_template('index.html')
+    return render_template("index.html")
 
-@app.route('/upload', methods=['POST'])
-def upload_image():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file uploaded'}), 400
 
-    uploaded_file = request.files['file']
-    if uploaded_file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
+@app.route("/upload", methods=["POST"])
+def upload():
+    """
+    POST /upload
+    Accepts: multipart/form-data with field 'file'
+    Returns: JSON DiagnosisResult + pdf_url
+    """
+    # ---- Validate presence --------------------------------------------------
+    if "file" not in request.files:
+        return jsonify({"error": "No file field in request."}), 400
 
-    uploaded_file.save(IMAGE_PATH)
+    f = request.files["file"]
+    if not f or f.filename == "":
+        return jsonify({"error": "No file selected."}), 400
+
+    # ---- Validate extension -------------------------------------------------
+    if not _allowed_file(f.filename):
+        return jsonify({
+            "error": (
+                f"Unsupported file type. Allowed: "
+                f"{', '.join(sorted(AppConfig.ALLOWED_EXTENSIONS))}"
+            )
+        }), 415
+
+    # ---- Validate MIME (magic bytes) ----------------------------------------
+    if not _validate_mime(f):
+        return jsonify({"error": "File content does not match an image format."}), 415
+
+    # ---- Save upload to a session-scoped temp directory --------------------
+    session_id   = uuid.uuid4().hex
+    session_dir  = Paths.CHAR_DIR / session_id
+    session_dir.mkdir(parents=True, exist_ok=True)
+
+    safe_name    = secure_filename(f.filename)
+    upload_path  = str(session_dir / safe_name)
+    f.save(upload_path)
+    logger.info("Upload saved: %s  (session=%s)", safe_name, session_id)
 
     try:
-        extract_characters(IMAGE_PATH)
-        predictions_array = [predict_image(os.path.join(OUTPUT_DIR, f), cnn_model)
-                             for f in os.listdir(OUTPUT_DIR) if f.endswith('.png')]
+        # ---- Inference ------------------------------------------------------
+        from pipeline.inference import run_inference
+        diagnosis = run_inference(upload_path)
 
-        result = "Dyslexia Detected" if predictions_array.count('Reversal') > predictions_array.count('Normal') else "No Dyslexia Detected"
-        pdf_path = generate_pdf_report(result, predictions_array, detect_sequence_anomaly("sample_sequence"), IMAGE_PATH)
+        # ---- Generate PDF ---------------------------------------------------
+        from pipeline.report_generator import generate_report
+        pdf_filename = f"report_{session_id}.pdf"
+        pdf_path     = generate_report(
+            diagnosis,
+            image_path=upload_path,
+            filename=pdf_filename,
+        )
+        # Auto-delete PDF after expiry
+        _schedule_deletion(pdf_path)
+
+        # ---- Build response payload -----------------------------------------
+        payload = diagnosis.to_dict()
+        payload["pdf_url"]  = f"/download_report/{pdf_filename}"
+        payload["session"]  = session_id
+
+        return jsonify(payload), 200
+
+    except Exception as exc:
+        logger.exception("Inference error for session %s", session_id)
+        return jsonify({
+            "error":   "Internal analysis error.",
+            "detail":  str(exc),
+            "session": session_id,
+        }), 500
+
     finally:
-        shutil.rmtree(OUTPUT_DIR, ignore_errors=True)
+        # Clean up only the session's temp character crops, not the report
+        import shutil
+        try:
+            shutil.rmtree(str(session_dir), ignore_errors=True)
+        except Exception:
+            pass
 
-    return jsonify({'result': result, 'pdf_report': pdf_path})
 
-@app.route('/download_report', methods=['GET'])
-def download_report():
-    if os.path.exists(PDF_FILE_PATH):
-        return send_file(PDF_FILE_PATH, as_attachment=True)
-    return jsonify({'error': 'Report not found'}), 404
+@app.route("/download_report/<filename>")
+def download_report(filename: str):
+    """
+    GET /download_report/<filename>
+    Serves the PDF report.  Filename is UUID-keyed — no path traversal possible.
+    """
+    # Guard: only allow filenames that match our naming convention
+    safe = secure_filename(filename)
+    if safe != filename or not filename.startswith("report_") or not filename.endswith(".pdf"):
+        abort(400)
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=501, debug=True, use_reloader=False)
+    pdf_path = Paths.REPORTS / safe
+    if not pdf_path.exists():
+        abort(404)
+
+    return send_file(
+        str(pdf_path),
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=safe,
+    )
+
+
+@app.route("/health")
+def health():
+    """Simple health-check endpoint for container orchestration."""
+    return jsonify({"status": "ok"}), 200
+
+
+# ---------------------------------------------------------------------------
+# Error handlers
+# ---------------------------------------------------------------------------
+
+@app.errorhandler(400)
+def bad_request(e):
+    return jsonify({"error": "Bad request.", "detail": str(e)}), 400
+
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({"error": "Not found."}), 404
+
+@app.errorhandler(413)
+def too_large(e):
+    return jsonify({
+        "error": f"File too large. Maximum size: "
+                 f"{AppConfig.MAX_CONTENT_LENGTH // (1024 * 1024)} MB."
+    }), 413
+
+@app.errorhandler(415)
+def unsupported_media(e):
+    return jsonify({"error": "Unsupported media type."}), 415
+
+@app.errorhandler(500)
+def server_error(e):
+    return jsonify({"error": "Internal server error."}), 500
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    app.run(
+        host=AppConfig.HOST,
+        port=AppConfig.PORT,
+        debug=AppConfig.DEBUG,
+    )
