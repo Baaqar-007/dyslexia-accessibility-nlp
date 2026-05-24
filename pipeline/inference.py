@@ -16,7 +16,7 @@ import joblib
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from config import Paths, NLPConfig
+from config import Paths, NLPConfig, EnsembleConfig as _EnsembleCfg
 
 logger = logging.getLogger(__name__)
 
@@ -116,34 +116,60 @@ def run_inference(image_path: str) -> "DiagnosisResult":
     cnn      = _get_cnn()
     cnn_imgs = np.stack([c.cnn_input for c in characters])    # (N, 64, 64, 1)
     cnn_probs = predict_batch(cnn, cnn_imgs).tolist()          # (N,)
+    
+    
+    # ── 4. NLP: analytical score blended with LSTM ───────────────────────────
+    #
+    # Analytical score: derived from CNN reversal probabilities directly.
+    # Counts strong reversals (CNN ≥ 0.85) normalised against clinical
+    # expectation of 8% for a dyslexic writer. Does not saturate to 100%
+    # from cursive noise (which lands at 50-80% CNN confidence).
+    #
+    # LSTM blend: once retrained on noise-aware data (python train_all.py 3),
+    # the LSTM contributes 30% of the NLP score. Until then, LSTM output
+    # saturates at ~100% for all inputs (distribution mismatch) and is
+    # ignored automatically via the saturation check below.
+    #
+    # Blending rule:
+    #   LSTM saturated (> 0.97 or < 0.03) → use analytical only
+    #   LSTM in valid range               → 70% analytical + 30% LSTM
+    #   LSTM errors                       → use analytical only
 
-    # ── 4. Build sequence and run NLP ────────────────────────────────────────
-    predicted_seq = "".join(chr(int(p) + 97) for p in mlp_preds)
-    nlp = _get_nlp()
+    from models.ensemble import compute_analytical_nlp
+
+    predicted_seq    = "".join(chr(int(p) + 97) for p in mlp_preds)
+    analytical_score = compute_analytical_nlp(cnn_probs)
+
     try:
-        encoded   = _encode_seq_numpy(predicted_seq)
-        nlp_score = predict_sequence(nlp, encoded)
-    except Exception as exc:
-        logger.warning("NLP inference failed (%s) — defaulting to 0.0", exc)
-        nlp_score = 0.0
+        encoded  = _encode_seq_numpy(predicted_seq)
+        lstm_raw = predict_sequence(_get_nlp(), encoded)
 
-    # ── 5. Ensemble ──────────────────────────────────────────────────────────
-    ensemble_score, result, confidence_label = compute_ensemble(
+        if 0.03 < lstm_raw < 0.97:
+            # LSTM giving meaningful output: blend with analytical
+            nlp_score = 0.70 * analytical_score + 0.30 * lstm_raw
+        else:
+            nlp_score = analytical_score
+
+    except Exception as exc:
+        logger.warning("LSTM inference failed (%s) — using analytical NLP", exc)
+        nlp_score = analytical_score
+
+    # ── 5. Ensemble ───────────────────────────────────────────────────────────
+    ensemble_score, cnn_component, nlp_component, result, confidence_label = compute_ensemble(
         reversal_probs  = cnn_probs,
         mlp_confidences = mlp_confs,
         nlp_score       = nlp_score,
     )
 
     per_char        = build_character_results(mlp_preds, mlp_proba, cnn_probs)
-    reversal_rate   = float(np.mean(cnn_probs))
     mlp_uncertainty = 1.0 - float(np.mean(mlp_confs))
 
     return DiagnosisResult(
         result             = result,
         ensemble_score     = ensemble_score,
         confidence_label   = confidence_label,
-        reversal_rate      = reversal_rate,
-        nlp_anomaly_score  = nlp_score,
+        reversal_rate      = cnn_component,    # strong-binary sliding window score
+        nlp_anomaly_score  = nlp_component,    # analytical + LSTM blend
         mlp_uncertainty    = mlp_uncertainty,
         num_characters     = len(characters),
         predicted_sequence = predicted_seq.upper(),

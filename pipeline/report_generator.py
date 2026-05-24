@@ -158,26 +158,26 @@ def generate_report(
     h3 = ParagraphStyle("H3", parent=styles["Heading3"],
                         textColor=colors.HexColor("#2c3e50"), spaceAfter=6)
     story.append(Paragraph("Score Breakdown", h3))
-
+    
     score_data = [
         ["Component", "Score", "Weight", "Contribution"],
         [
-            "CNN Reversal Rate",
+            "CNN Reversal Density",
             f"{diagnosis.reversal_rate:.1%}",
-            "50 %",
-            f"{diagnosis.reversal_rate * 0.50:.1%}",
+            "55 %",
+            f"{diagnosis.reversal_rate * 0.55:.1%}",
         ],
         [
-            "NLP Sequence Anomaly",
+            "NLP Pattern Score",
             f"{diagnosis.nlp_anomaly_score:.1%}",
-            "35 %",
-            f"{diagnosis.nlp_anomaly_score * 0.35:.1%}",
+            "40 %",
+            f"{diagnosis.nlp_anomaly_score * 0.40:.1%}",
         ],
         [
             "MLP Letter Uncertainty",
             f"{diagnosis.mlp_uncertainty:.1%}",
-            "15 %",
-            f"{diagnosis.mlp_uncertainty * 0.15:.1%}",
+            "5 %",
+            f"{diagnosis.mlp_uncertainty * 0.05:.1%}",
         ],
         ["", "", "Ensemble Score →", f"{diagnosis.ensemble_score:.1%}"],
     ]
@@ -261,6 +261,8 @@ def generate_report(
         char_table.setStyle(char_style)
         story.append(char_table)
         story.append(Spacer(1, 14))
+        
+    
 
     # ---- Recommendations -----------------------------------------------------
     story.append(Paragraph("Recommendations", h3))
