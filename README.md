@@ -1,8 +1,8 @@
 # Dyslexia Accessibility NLP
 
-A multimodal deep learning pipeline for dyslexia screening from handwriting images. Three heterogeneous models — a scikit-learn MLP letter classifier, a PyTorch CNN reversal detector, and a PyTorch Bidirectional LSTM sequence anomaly detector — are fused via a clinically motivated weighted ensemble and served through a Flask web application with structured PDF reporting.
+A multi-model deep learning pipeline for dyslexia screening from handwriting images. Three heterogeneous models — a scikit-learn MLP letter classifier, a PyTorch CNN reversal detector, and a PyTorch Bidirectional LSTM sequence anomaly detector — are fused via a clinically motivated weighted ensemble and served through a Flask web application with structured PDF reporting.
 
-This project is framed as a research capstone on multimodal fusion for social impact, not a production tool. Every architectural and mathematical decision is motivated and documented below.
+This project is framed as a research capstone on multi-model fusion for social impact, not a production tool. Every architectural and mathematical decision is motivated and documented below.
 
 ---
 
@@ -223,7 +223,7 @@ The LSTM remains in the architecture and contributes 30% when its output is in a
 
 This is a training-inference distribution mismatch. The fix (`_simulate_mlp_noise()`) applies structured MLP confusion substitutions to both training classes before dyslexic transformations are added to the anomalous class. This ensures the LSTM sees the same noise floor at training time as at inference, forcing it to learn the boundary between baseline MLP noise (normal) and dyslexic patterns above that baseline — the exact distinction it needs to make.
 
-### Why multimodal fusion over a single model?
+### Why ensemble fusion over a single model?
 
 Each model captures a distinct and complementary signal:
 
@@ -233,7 +233,7 @@ Each model captures a distinct and complementary signal:
 | CNN | Spatial reversal pattern in character shape | Visual / convolutional |
 | NLP | Sequence-level statistical and linguistic anomaly | Sequential / analytical |
 
-No single modality is sufficient. A writer who reverses letters cleanly (high MLP confidence, high CNN reversal) would be missed by a sequence-only model. A writer with poor handwriting quality (low MLP confidence) but no reversals would be over-flagged by a CNN-only model. Multimodal fusion with domain-motivated weights handles both cases.
+No single modality is sufficient. A writer who reverses letters cleanly (high MLP confidence, high CNN reversal) would be missed by a sequence-only model. A writer with poor handwriting quality (low MLP confidence) but no reversals would be over-flagged by a CNN-only model. The ensemble with domain-motivated weights handles both cases.
 
 ### Why not horizontal flip augmentation for the CNN?
 
