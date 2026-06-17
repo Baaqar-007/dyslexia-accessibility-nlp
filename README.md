@@ -1,5 +1,8 @@
 # Dyslexia Accessibility NLP
 
+[![Live Demo](https://img.shields.io/badge/🤗%20Hugging%20Face-Live%20Demo-blue)](https://huggingface.co/spaces/Xav007/dyslexia-accessibility-nlp)
+
+
 A multi-model deep learning pipeline for dyslexia screening from handwriting images. Three heterogeneous models — a scikit-learn MLP letter classifier, a PyTorch CNN reversal detector, and a PyTorch Bidirectional LSTM sequence anomaly detector — are fused via a clinically motivated weighted ensemble and served through a Flask web application with structured PDF reporting.
 
 This project is framed as a research capstone on multi-model fusion for social impact, not a production tool. Every architectural and mathematical decision is motivated and documented below.
