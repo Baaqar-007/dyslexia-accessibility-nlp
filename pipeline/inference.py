@@ -72,6 +72,66 @@ def _encode_seq_numpy(seq: str) -> np.ndarray:
 # ---------------------------------------------------------------------------
 # Core inference
 # ---------------------------------------------------------------------------
+def _assess_extraction_quality(
+    mlp_preds:  np.ndarray,
+    cnn_probs:  list[float],
+) -> tuple[bool, str]:
+    """
+    Sanity-check character extraction before running the ensemble.
+
+    Two checks:
+
+    1. Rare letter dominance
+       Letters z, x, q, j, w, v are extremely uncommon in real English text
+       and are frequently produced by misclassifying background noise, paper
+       texture, and stroke fragments. If they dominate the predictions the
+       extractor grabbed non-character regions.
+
+       Inverted logic vs. checking for common letter presence:
+       Short real words like "KITE FAMILY" legitimately contain few
+       common letters (e, t, a, o, i, n, s, h, r, d, l, u) but will
+       never be dominated by z, x, q, j, w, v.
+
+    2. Raw CNN reversal rate
+       Even worst-case dyslexic short text (40% of characters genuinely
+       reversed + moderate CNN responses on ambiguous letters) stays below
+       0.65. Above this the CNN is processing noise regions, not characters.
+
+    Returns (passed: bool, reason: str)
+    """
+    from config import QualityGateConfig as QCfg
+
+    n = len(mlp_preds)
+    if n < QCfg.MIN_CHARACTERS:
+        return False, (
+            f"Too few characters detected ({n}). "
+            f"Please upload an image with more clearly written text."
+        )
+
+    # Check 1 — rare letter dominance
+    letters    = [chr(int(p) + 97) for p in mlp_preds]
+    rare_ratio = sum(1 for l in letters if l in QCfg.RARE_LETTERS) / n
+    if rare_ratio > QCfg.MAX_RARE_LETTER_RATIO:
+        return False, (
+            f"Poor extraction quality: {rare_ratio:.1%} of predicted characters "
+            f"are rare English letters (z, x, q, j, w, v), which typically "
+            f"indicates the character extractor segmented image noise or background "
+            f"texture rather than actual handwriting. Try a clearer, higher-contrast "
+            f"image with the text filling most of the frame."
+        )
+
+    # Check 2 — raw reversal rate ceiling
+    raw_reversal = float(np.mean(cnn_probs))
+    if raw_reversal > QCfg.MAX_RAW_REVERSAL_RATE:
+        return False, (
+            f"Poor extraction quality: raw reversal rate of {raw_reversal:.1%} "
+            f"exceeds the plausible maximum ({QCfg.MAX_RAW_REVERSAL_RATE:.0%}). "
+            f"The character extractor likely segmented image noise or background "
+            f"regions rather than actual handwritten characters."
+        )
+
+    return True, ""
+
 
 def run_inference(image_path: str) -> "DiagnosisResult":
     from pipeline.character_extraction import extract_characters
@@ -117,8 +177,26 @@ def run_inference(image_path: str) -> "DiagnosisResult":
     cnn_imgs = np.stack([c.cnn_input for c in characters])    # (N, 64, 64, 1)
     cnn_probs = predict_batch(cnn, cnn_imgs).tolist()          # (N,)
     
+    predicted_seq    = "".join(chr(int(p) + 97) for p in mlp_preds)
+
+    # ── 4. Quality gate — catch failed extraction before ensemble ─────────────
+    quality_ok, quality_reason = _assess_extraction_quality(mlp_preds, cnn_probs)
+    if not quality_ok:
+        logger.warning("Quality gate failed: %s", quality_reason)
+        return DiagnosisResult(
+            result           = "Inconclusive",
+            ensemble_score   = 0.0,
+            confidence_label = "Low",
+            reversal_rate    = 0.0,
+            nlp_anomaly_score= 0.0,
+            mlp_uncertainty  = 0.0,
+            num_characters   = len(characters),
+            predicted_sequence = predicted_seq.upper() if 'predicted_seq' in dir() else "",
+            per_character    = [],
+            message          = quality_reason,
+        )
     
-    # ── 4. NLP: analytical score blended with LSTM ───────────────────────────
+    # ── 5. NLP: analytical score blended with LSTM ───────────────────────────
     #
     # Analytical score: derived from CNN reversal probabilities directly.
     # Counts strong reversals (CNN ≥ 0.85) normalised against clinical
@@ -137,7 +215,6 @@ def run_inference(image_path: str) -> "DiagnosisResult":
 
     from models.ensemble import compute_analytical_nlp
 
-    predicted_seq    = "".join(chr(int(p) + 97) for p in mlp_preds)
     analytical_score = compute_analytical_nlp(cnn_probs)
 
     try:
