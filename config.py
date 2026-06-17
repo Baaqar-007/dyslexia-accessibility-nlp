@@ -133,6 +133,35 @@ class EnsembleConfig:
     EXPECTED_REVERSAL_RATE  = 0.08
     MIN_REVERSAL_EXPECTED   = 5      # floor prevents short-text over-sensitivity
 
+class QualityGateConfig:
+    # Letters that are extremely rare in real English text AND
+    # that background noise, paper texture, and stroke fragments
+    # commonly get misclassified as (due to their distinctive shapes).
+    # Checking for DOMINANCE of rare letters is more robust than checking
+    # for ABSENCE of common ones — especially for short texts where
+    # words like "KITE FAMILY" legitimately contain few common letters.
+    RARE_LETTERS          = set('zxqjwv')
+
+    # If more than 55% of predicted letters are from the rare set,
+    # the extractor almost certainly grabbed noise rather than characters.
+    # Real text — even heavily misspelled dyslexic short words —
+    # will not produce this distribution.
+    # Example haywire sequence (250 chars): Z~12% W~15% Y~10% Q~4% = ~45%+
+    # Example KITE FAMILY: only Y is rare = 10%. Far below threshold.
+    MAX_RARE_LETTER_RATIO = 0.55
+
+    # Raw CNN reversal mean upper bound.
+    # Set to 0.65 to handle worst-case short dyslexic text:
+    # 4 of 10 characters genuinely inverted (40%) + moderate CNN
+    # responses on visually ambiguous letters (A, I, M) = up to ~55%.
+    # 0.65 provides headroom while still catching haywire extractions
+    # (which score ~70-80% raw reversal on noise regions).
+    MAX_RAW_REVERSAL_RATE = 0.65
+
+    # Minimum characters for any meaningful analysis
+    MIN_CHARACTERS        = 4
+    
+    
 # ---------------------------------------------------------------------------
 # Synthetic NLP data generation
 # ---------------------------------------------------------------------------
