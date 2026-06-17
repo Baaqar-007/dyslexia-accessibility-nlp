@@ -107,6 +107,16 @@ CNN (PyTorch, GPU)
   Conv2D × 3 blocks → GlobalAvgPool → sigmoid → reversal probability [0,1]
     │
     ▼
+Quality Gate (pipeline/inference.py)
+  Check 1 — rare letter dominance:
+    rare_ratio = count(z,x,q,j,w,v) / n
+    if rare_ratio > 0.55 → Inconclusive
+    (noise/background regions produce these letters; real text never dominates with them)
+  Check 2 — raw CNN reversal ceiling:
+    if mean(cnn_probs) > 0.65 → Inconclusive
+    (worst-case genuine dyslexic text stays below 0.65; noise regions exceed it)
+    │
+    ▼
 NLP component (hybrid)
   Analytical score:
     strong_count (CNN ≥ 0.85) / max(n × 0.08, 5)
@@ -239,6 +249,29 @@ No single modality is sufficient. A writer who reverses letters cleanly (high ML
 
 Deliberately excluded. A horizontally flipped 'b' is a 'd' — which is exactly the reversal pattern being detected. Including it as augmentation would teach the model that both orientations are equivalent, destroying its ability to detect reversals. This is a domain-specific augmentation choice motivated by the nature of the classification task.
 
+### Why a quality gate before the ensemble?
+
+When character extraction fails — due to a noisy image, extreme angle, faint ink,
+or cluttered background — the downstream models process garbage and produce
+confidently wrong outputs. The ensemble has no way to know the input was invalid.
+
+Two independent checks catch this before any scoring happens:
+
+**Rare letter dominance:** Background noise and stroke fragments get misclassified
+as z, x, q, j, w, v — letters with distinctive shapes that match common noise
+patterns. These letters make up under 3% of normal English text. If they exceed
+55% of predictions, the extractor grabbed non-character regions. This check is
+deliberately inverted from checking for common letter presence — short real words
+like "KITE FAMILY" legitimately contain few common letters (e, t, a, o, i, n...)
+but will never be dominated by rare ones.
+
+**Raw reversal ceiling:** Even worst-case dyslexic short text — 4 of 10 characters
+genuinely reversed plus moderate CNN responses on visually ambiguous letters —
+stays below 0.65 raw mean. Noise regions consistently exceed this. The threshold
+provides headroom for genuine edge cases while blocking haywire extractions.
+
+Both thresholds are set conservatively to avoid false Inconclusive results on
+legitimate images, and both are configurable in `QualityGateConfig` in `config.py`.
 ---
 
 ## Key Improvements Over Beta Versions
@@ -267,6 +300,7 @@ Deliberately excluded. A horizontally flipped 'b' is a 'd' — which is exactly 
 | Flask sessions | Shared filename (race condition on concurrent requests) | UUID-keyed per-request sessions |
 | File cleanup | `shutil.rmtree` in finally block | Daemon thread auto-delete after 5 min |
 | Input validation | None | Extension check + magic-byte MIME validation + size limit |
+| Quality gate | None — failed extraction scored as high dyslexia probability | Rare letter dominance + raw reversal ceiling block bad extractions before ensemble |
 
 ---
 
